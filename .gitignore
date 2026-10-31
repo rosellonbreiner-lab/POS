@@ -1,5 +1,3 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # dependencies
 /node_modules
 /.pnp
@@ -30,8 +28,27 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files (NO subir a GitHub)
 .env*
+!.env.example
+
+# credenciales sensibles locales (NO subir a GitHub)
+USUARIOS_Y_CONTRASEÑAS.txt
+USUARIOS_Y_CONTRASEÑAS*.txt
+
+# Archivos pesados / WhatsApp / backups locales
+*.mp4
+*.mov
+WhatsApp*
+backup/
+
+# Base de datos SQLite local (No subir base de datos local con datos de prueba)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+prisma/*.db
+prisma/*.db-journal
 
 # vercel
 .vercel

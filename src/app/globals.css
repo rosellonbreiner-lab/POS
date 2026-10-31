@@ -1,26 +1,215 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Nueva Paleta Minimal Dashboard Colors (WhatsApp) */
+  --bg: #0D1117;
+  --bg-surface: #222831;
+  --bg-glow-1: rgba(31, 58, 95, 0.35);
+  --bg-glow-2: rgba(90, 169, 230, 0.22);
+  --glass: rgba(34, 40, 49, 0.70);
+  --glass-strong: rgba(34, 40, 49, 0.88);
+  --glass-border: rgba(90, 169, 230, 0.18);
+  --text: #EAF4F4;
+  --text-muted: #94A3B8;
+  --primary: #5AA9E6;
+  --primary-hover: #468ec7;
+  --primary-deep: #1F3A5F;
+  --info: #38BDF8;
+  --success: #34D399;
+  --warning: #FBBF24;
+  --danger: #F87171;
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg);
+  background-image: 
+    radial-gradient(circle at 15% 15%, var(--bg-glow-1) 0%, transparent 50%),
+    radial-gradient(circle at 85% 85%, var(--bg-glow-2) 0%, transparent 45%);
+  background-attachment: fixed;
+  color: var(--text);
+  font-family: var(--font-inter, system-ui, -apple-system, sans-serif);
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+}
+
+/* Glass Utility Classes */
+.glass {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(234, 244, 244, 0.08);
+}
+
+.glass-strong {
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(234, 244, 244, 0.12);
+}
+
+/* ==============================================================
+   ANIMACIONES DEL PILOTO EN MOTO ANDANDO / CABALLITO / PIRUETAS
+   ============================================================== */
+
+/* 1. MOTO ANDANDO A TODA VELOCIDAD POR AUTOPISTA (Vibración y suspensión real) */
+@keyframes riderCruising {
+  0% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  20% {
+    transform: translateY(-3px) rotate(-0.5deg);
+  }
+  40% {
+    transform: translateY(2px) rotate(0.4deg);
+  }
+  60% {
+    transform: translateY(-2px) rotate(-0.3deg);
+  }
+  80% {
+    transform: translateY(1px) rotate(0.2deg);
+  }
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+}
+
+/* 2. PIRUETA WHEELIE (Caballito / Levantar llanta delantera) */
+@keyframes riderWheelie {
+  0% {
+    transform: translateY(0) rotate(0deg);
+  }
+  15% {
+    transform: translateY(5px) rotate(2deg); /* Comprime suspensión trasera */
+  }
+  40% {
+    transform: translateY(-35px) rotate(-28deg); /* ¡Levanta la moto! */
+  }
+  75% {
+    transform: translateY(-30px) rotate(-24deg); /* Mantiene caballito en equilibrio */
+  }
+  90% {
+    transform: translateY(2px) rotate(1deg); /* Cae suave */
+  }
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+}
+
+/* 3. LÍNEAS DE CARRETERA / ASFALTO CORRIENDO HACIA LA IZQUIERDA */
+@keyframes roadMoving {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: -400px 0%;
+  }
+}
+
+/* 4. POSTES Y LUCES DE AUTOPISTA NOCTURNA PASANDO */
+@keyframes highwayLights {
+  0% {
+    transform: translateX(350px);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.8;
+  }
+  80% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateX(-350px);
+    opacity: 0;
+  }
+}
+
+/* 5. VIENTO Y RESPLANDOR DE VELOCIDAD */
+@keyframes speedWind {
+  0% {
+    transform: translateX(180px);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateX(-220px);
+    opacity: 0;
+  }
+}
+
+/* 6. DESPEGUE / ACELERACIÓN BRUTAL AL INICIAR SESIÓN */
+@keyframes riderTurboLaunch {
+  0% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(6px) rotate(3deg) scale(1.02);
+  }
+  45% {
+    transform: translateY(-40px) rotate(-32deg) scale(1.08); /* Sube en caballito agresivo */
+  }
+  100% {
+    transform: translateX(320px) translateY(-55px) rotate(-35deg) scale(1.2);
+    opacity: 0;
+  }
+}
+
+.animate-rider-cruising {
+  animation: riderCruising 0.8s ease-in-out infinite;
+}
+
+.animate-rider-wheelie {
+  animation: riderWheelie 2.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+.animate-rider-turbo {
+  animation: riderTurboLaunch 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-road-moving {
+  animation: roadMoving 0.65s linear infinite;
+}
+
+.animate-highway-lights {
+  animation: highwayLights 1.6s linear infinite;
+}
+
+.animate-speed-wind {
+  animation: speedWind 0.7s linear infinite;
+}
+
+/* Fallback when backdrop-filter is unsupported */
+@supports not (backdrop-filter: blur(16px)) {
+  .glass, .glass-strong {
+    background: rgba(34, 40, 49, 0.95);
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Scrollbar customization */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(13, 17, 23, 0.6);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(90, 169, 230, 0.25);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(90, 169, 230, 0.45);
 }

@@ -1,0 +1,393 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// -------------------------------------------------------------
+// 1. USUARIOS, ROLES Y AUTENTICACIÓN
+// -------------------------------------------------------------
+
+enum UserRole {
+  SUPERADMIN
+  ADMIN
+  TRABAJADOR
+  CONTADOR
+  CAJERO
+  MECANICO
+  BODEGUERO
+}
+
+model User {
+  id              String        @id @default(uuid())
+  email           String        @unique
+  name            String
+  passwordHash    String
+  role            UserRole      @default(CAJERO)
+  twoFactorSecret String?
+  twoFactorActive Boolean       @default(false)
+  failedAttempts  Int           @default(0)
+  lockedUntil     DateTime?
+  forcePasswordReset Boolean    @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  sessions        Session[]
+  auditLogs       AuditLog[]
+  invoices        Invoice[]
+  quotes          Quote[]
+  workOrders      WorkOrder[]
+}
+
+model Session {
+  id           String    @id @default(uuid())
+  tokenHash    String    @unique
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ipAddress    String?
+  userAgent    String?
+  expiresAt    DateTime
+  createdAt    DateTime  @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String   // e.g. "AUTH_LOGIN", "INVOICE_CANCEL", "STOCK_ADJUST"
+  resource   String   // e.g. "Invoice", "Product"
+  resourceId String?
+  details    Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+}
+
+// -------------------------------------------------------------
+// 2. INVENTARIO & UBICACIÓN FÍSICA
+// -------------------------------------------------------------
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  description String?
+  products    Product[]
+}
+
+model Brand {
+  id       String    @id @default(uuid())
+  name     String    @unique
+  products Product[]
+}
+
+model Product {
+  id            String          @id @default(uuid())
+  sku           String          @unique
+  barcode       String?         @unique
+  name          String
+  description   String?
+  categoryId    String?
+  category      Category?       @relation(fields: [categoryId], references: [id])
+  brandId       String?
+  brand         Brand?          @relation(fields: [brandId], references: [id])
+  motorcycleFit String?         // Ej. "Yamaha YBR 125, Pulsar NS 200"
+  costPrice     Int             // Guardado en centavos/enteros
+  salePrice     Int             // Guardado en centavos/enteros
+  taxRate       Int             @default(19) // IVA en % (ej. 19)
+  currentStock  Int             @default(0)
+  minStock      Int             @default(3)
+  imageUrl      String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  locations     ProductLocation[]
+  movements     StockMovement[]
+  invoiceItems  InvoiceItem[]
+  quoteItems    QuoteItem[]
+  orderItems    WorkOrderItem[]
+}
+
+model Location {
+  id          String            @id @default(uuid())
+  warehouse   String            @default("Principal") // Bodega
+  shelf       String            // Estante, ej: "E-03"
+  level       Int               // Nivel, ej: 1, 2, 3
+  position    String?           // Posición en bandeja
+  products    ProductLocation[]
+
+  @@unique([warehouse, shelf, level, position])
+}
+
+model ProductLocation {
+  id         String   @id @default(uuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id])
+  quantity   Int      @default(0)
+
+  @@unique([productId, locationId])
+}
+
+enum MovementType {
+  ENTRADA_COMPRA
+  SALIDA_VENTA
+  SALIDA_ORDEN_TRABAJO
+  AJUSTE_POSITIVO
+  AJUSTE_NEGATIVO
+}
+
+model StockMovement {
+  id          String       @id @default(uuid())
+  productId   String
+  product     Product      @relation(fields: [productId], references: [id])
+  type        MovementType
+  quantity    Int          // Positivo o negativo
+  previousQty Int
+  newQty      Int
+  reason      String?      // Motivo de ajuste o ref
+  referenceId String?      // Factura o ID de orden
+  createdAt   DateTime     @default(now())
+}
+
+// -------------------------------------------------------------
+// 3. CLIENTES, MOTOS, COTIZACIONES Y FACTURAS
+// -------------------------------------------------------------
+
+model Customer {
+  id          String       @id @default(uuid())
+  name        String
+  documentId  String?      @unique // Cédula o NIT
+  phone       String?
+  email       String?
+  address     String?
+  motos       Motorcycle[]
+  invoices    Invoice[]
+  quotes      Quote[]
+  workOrders  WorkOrder[]
+  credits     Credit[]
+}
+
+model Motorcycle {
+  id          String       @id @default(uuid())
+  customerId  String
+  customer    Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  plate       String       @unique // Placa colombiana
+  brand       String
+  model       String
+  year        Int?
+  color       String?
+  notes       String?
+  workOrders  WorkOrder[]
+  quotes      Quote[]
+}
+
+enum QuoteStatus {
+  BORRADOR
+  ENVIADA
+  APROBADA
+  RECHAZADA
+  CONVERTIDA
+}
+
+model Quote {
+  id           String      @id @default(uuid())
+  consecutive  Int         @unique @default(1001)
+  customerId   String?
+  customer     Customer?   @relation(fields: [customerId], references: [id])
+  motorcycleId String?
+  motorcycle   Motorcycle? @relation(fields: [motorcycleId], references: [id])
+  userId       String
+  user         User        @relation(fields: [userId], references: [id])
+  status       String      @default("BORRADOR")
+  subtotal     Int
+  taxAmount    Int
+  total        Int
+  validUntil   DateTime
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  items        QuoteItem[]
+}
+
+model QuoteItem {
+  id          String   @id @default(uuid())
+  quoteId     String
+  quote       Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id])
+  description String
+  quantity    Int
+  unitPrice   Int
+  totalPrice  Int
+}
+
+enum InvoiceStatus {
+  PAGADA
+  PENDIENTE
+  ANULADA
+}
+
+model Invoice {
+  id           String        @id @default(uuid())
+  consecutive  Int           @unique @default(1001)
+  customerId   String?
+  customer     Customer?     @relation(fields: [customerId], references: [id])
+  userId       String
+  user         User          @relation(fields: [userId], references: [id])
+  status       String        @default("PAGADA")
+  subtotal     Int
+  taxAmount    Int
+  discount     Int           @default(0)
+  total        Int
+  paymentType  String        // EFECTIVO, TRANSFERENCIA, TARJETA, MIXTO, CREDITO
+  createdAt    DateTime      @default(now())
+
+  items        InvoiceItem[]
+  creditNotes  CreditNote[]
+  credit       Credit?
+}
+
+model InvoiceItem {
+  id          String   @id @default(uuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  quantity    Int
+  unitPrice   Int
+  taxRate     Int
+  totalPrice  Int
+}
+
+model CreditNote {
+  id          String   @id @default(uuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id])
+  reason      String
+  amount      Int
+  createdAt   DateTime @default(now())
+}
+
+model Credit {
+  id              String          @id @default(uuid())
+  consecutive     Int             @unique @default(1001)
+  invoiceId       String?         @unique
+  invoice         Invoice?        @relation(fields: [invoiceId], references: [id])
+  customerId      String
+  customer        Customer        @relation(fields: [customerId], references: [id])
+  plate           String?
+  totalAmount     Int
+  paidAmount      Int             @default(0)
+  remainingAmount Int
+  status          String          @default("PENDIENTE") // PENDIENTE, PARCIAL, PAGADO
+  notes           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  payments        CreditPayment[]
+}
+
+model CreditPayment {
+  id              String   @id @default(uuid())
+  creditId        String
+  credit          Credit   @relation(fields: [creditId], references: [id], onDelete: Cascade)
+  amount          Int
+  paymentType     String   @default("EFECTIVO") // EFECTIVO, TRANSFERENCIA
+  previousBalance Int
+  newBalance      Int
+  notes           String?
+  receivedBy      String?
+  createdAt       DateTime @default(now())
+}
+
+// -------------------------------------------------------------
+// 4. ÓRDENES DE TRABAJO
+// -------------------------------------------------------------
+
+enum OrderStatus {
+  RECIBIDA
+  EN_DIAGNOSTICO
+  EN_REPARACION
+  LISTA_PARA_ENTREGA
+  ENTREGADA_Y_FACTURADA
+  CANCELADA
+}
+
+model WorkOrder {
+  id           String          @id @default(uuid())
+  consecutive  Int             @unique @default(1001)
+  customerId   String
+  customer     Customer        @relation(fields: [customerId], references: [id])
+  motorcycleId String
+  motorcycle   Motorcycle      @relation(fields: [motorcycleId], references: [id])
+  userId       String
+  user         User            @relation(fields: [userId], references: [id])
+  status       String          @default("RECIBIDA")
+  mileage      Int?            // Kilometraje
+  diagnosis    String?
+  workDetails  String?
+  laborCost    Int             @default(0)
+  partsCost    Int             @default(0)
+  total        Int             @default(0)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  items        WorkOrderItem[]
+}
+
+model WorkOrderItem {
+  id          String    @id @default(uuid())
+  orderId     String
+  order       WorkOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id])
+  quantity    Int
+  unitPrice   Int
+  totalPrice  Int
+}
+
+// -------------------------------------------------------------
+// 5. CONTABILIDAD EXTENSIBLE & CAJA
+// -------------------------------------------------------------
+
+model Account {
+  id          String        @id @default(uuid())
+  code        String        @unique // Ej. 1105 (Caja), 4135 (Ingresos comercio)
+  name        String
+  type        String        // ACTIVO, PASIVO, PATRIMONIO, INGRESO, GASTO
+  lines       JournalLine[]
+}
+
+model JournalEntry {
+  id          String        @id @default(uuid())
+  date        DateTime      @default(now())
+  concept     String
+  reference   String?       // Ref factura/compra
+  createdAt   DateTime      @default(now())
+  lines       JournalLine[]
+}
+
+model JournalLine {
+  id        String       @id @default(uuid())
+  entryId   String
+  entry     JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  accountId String
+  account   Account      @relation(fields: [accountId], references: [id])
+  debit     Int          @default(0) // Débito
+  credit    Int          @default(0) // Crédito
+}
+
+model CashSession {
+  id           String    @id @default(uuid())
+  openedAt     DateTime  @default(now())
+  closedAt     DateTime?
+  initialCash  Int       // Base de caja
+  finalCash    Int?      // Arqueo físico de cierre
+  calculatedCash Int?    // Calculado por sistema
+  difference   Int?      // Sobrante o faltante
+  status       String    @default("ABIERTA") // ABIERTA, CERRADA
+}
+
