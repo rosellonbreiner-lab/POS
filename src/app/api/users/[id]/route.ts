@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, hashPassword } from "@/lib/auth";
-import { getSettings, saveSettings } from "@/app/api/settings/route";
+import { getSettings, saveSettings } from "@/lib/settings";
 import { createAuditLog } from "@/lib/audit";
 import { UserRole } from "@prisma/client";
 
@@ -24,7 +24,7 @@ export async function PATCH(
 
   try {
     const body = await request.json();
-    const { name, email, role, newPassword } = body;
+    const { name, email, role, newPassword, companyId } = body;
 
     const existingUser = await prisma.user.findUnique({ where: { id } });
     if (!existingUser) {
@@ -56,6 +56,7 @@ export async function PATCH(
 
     const settings = getSettings();
     const credentials = { ...(settings.userCredentials || {}) };
+    const userCompanies = { ...(settings.userCompanies || {}) };
 
     if (newPassword && newPassword.trim()) {
       updateData.passwordHash = await hashPassword(newPassword.trim());
@@ -71,7 +72,19 @@ export async function PATCH(
       }
     }
 
-    saveSettings({ ...settings, userCredentials: credentials });
+    // Actualizar empresa asignada si se especificó
+    if (companyId) {
+      userCompanies[updatedEmail.toLowerCase()] = companyId;
+    } else if (updatedEmail.toLowerCase() !== existingUser.email.toLowerCase()) {
+      const currentComp = userCompanies[existingUser.email.toLowerCase()] || userCompanies[existingUser.email];
+      if (currentComp) {
+        userCompanies[updatedEmail.toLowerCase()] = currentComp;
+        delete userCompanies[existingUser.email.toLowerCase()];
+        delete userCompanies[existingUser.email];
+      }
+    }
+
+    saveSettings({ ...settings, userCredentials: credentials, userCompanies });
 
     const updated = await prisma.user.update({
       where: { id },
@@ -88,9 +101,14 @@ export async function PATCH(
         name: updated.name,
         email: updated.email,
         role: updated.role,
+        companyId: companyId || userCompanies[updated.email.toLowerCase()],
         passwordChanged: Boolean(newPassword && newPassword.trim()),
       },
     });
+
+    const assignedCompany = (settings.companies || []).find(
+      (c: any) => c.id === userCompanies[updated.email.toLowerCase()]
+    );
 
     return NextResponse.json({
       success: true,
@@ -100,6 +118,8 @@ export async function PATCH(
         name: updated.name,
         email: updated.email,
         role: updated.role,
+        companyId: userCompanies[updated.email.toLowerCase()],
+        companyName: assignedCompany?.name || userCompanies[updated.email.toLowerCase()],
         password: credentials[updated.email.toLowerCase()] || "••••••••",
       },
     });
@@ -155,7 +175,6 @@ export async function DELETE(
       await tx.session.deleteMany({ where: { userId: id } });
 
       // 2. Si el usuario creó facturas, cotizaciones u órdenes históricas, reasignarlas al superadmin
-      // para preservar la integridad referencial y no romper la contabilidad
       if (existingUser.invoices.length > 0) {
         await tx.invoice.updateMany({
           where: { userId: id },
@@ -181,12 +200,17 @@ export async function DELETE(
       await tx.user.delete({ where: { id } });
     });
 
-    // 4. Limpiar credenciales del archivo de configuración
+    // 4. Limpiar credenciales y empresa del archivo de configuración
     const settings = getSettings();
     const credentials = { ...(settings.userCredentials || {}) };
+    const userCompanies = { ...(settings.userCompanies || {}) };
+
     delete credentials[existingUser.email.toLowerCase()];
     delete credentials[existingUser.email];
-    saveSettings({ ...settings, userCredentials: credentials });
+    delete userCompanies[existingUser.email.toLowerCase()];
+    delete userCompanies[existingUser.email];
+
+    saveSettings({ ...settings, userCredentials: credentials, userCompanies });
 
     // 5. Registrar en auditoría
     await createAuditLog({

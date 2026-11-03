@@ -27,6 +27,8 @@ import {
   Camera,
   Menu,
   X,
+  Building2,
+  Store,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -118,6 +120,10 @@ export default function DashboardPage() {
   const [quoteToConvert, setQuoteToConvert] = useState<any | null>(null);
   const [convertPaymentType, setConvertPaymentType] = useState<string>("EFECTIVO");
 
+  // Multi-Empresa (Soporte para múltiples microempresas: Talleres de motos, tiendas, minimarkets)
+  const [availableCompanies, setAvailableCompanies] = useState<any[]>([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>("ALL");
+
   // 1. Verificar sesión con timeout de protección para móviles
   useEffect(() => {
     let isMounted = true;
@@ -128,7 +134,15 @@ export default function DashboardPage() {
     fetch("/api/auth/me", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
-        if (isMounted && data?.user) setUser(data.user);
+        if (isMounted && data?.user) {
+          setUser(data.user);
+          if (data.user.role !== "SUPERADMIN" && data.user.companyId) {
+            setSelectedCompanyId(data.user.companyId);
+          }
+          if (data.companies) {
+            setAvailableCompanies(data.companies);
+          }
+        }
       })
       .catch((err) => {
         console.warn("Auth check warning:", err);
@@ -151,7 +165,7 @@ export default function DashboardPage() {
     if (!user) return;
     setLoading(true);
     try {
-      const [resDash, resProd, resOrd, resSales, resQuotes, resCredits, resSettings] = await Promise.all([
+      const [resDash, resProd, resOrd, resSales, resQuotes, resCredits, resSettings, resCompanies] = await Promise.all([
         fetch("/api/dashboard"),
         fetch(`/api/products?q=${encodeURIComponent(quickSearch)}`),
         fetch("/api/orders"),
@@ -159,9 +173,10 @@ export default function DashboardPage() {
         fetch("/api/quotes"),
         fetch("/api/credits"),
         fetch("/api/settings"),
+        fetch("/api/companies"),
       ]);
 
-      const [dataDash, dataProd, dataOrd, dataSales, dataQuotes, dataCredits, dataSettings] = await Promise.all([
+      const [dataDash, dataProd, dataOrd, dataSales, dataQuotes, dataCredits, dataSettings, dataCompanies] = await Promise.all([
         resDash.json(),
         resProd.json(),
         resOrd.json(),
@@ -169,6 +184,7 @@ export default function DashboardPage() {
         resQuotes.json(),
         resCredits.json(),
         resSettings.json(),
+        resCompanies.json(),
       ]);
 
       if (dataDash.kpis) setDashboardData(dataDash);
@@ -178,12 +194,41 @@ export default function DashboardPage() {
       if (dataQuotes.quotes) setQuotes(dataQuotes.quotes);
       if (dataCredits.credits) setCredits(dataCredits.credits);
       if (dataSettings.config) setWorkshopConfig(dataSettings.config);
+      if (dataCompanies.companies) {
+        setAvailableCompanies(dataCompanies.companies);
+        if (user.role !== "SUPERADMIN" && user.companyId) {
+          setSelectedCompanyId(user.companyId);
+        }
+      }
     } catch (e) {
       console.error("Error al cargar datos:", e);
     } finally {
       setLoading(false);
     }
   };
+
+  // Empresa activa actual calculada
+  const activeCompany = useMemo(() => {
+    if (selectedCompanyId && selectedCompanyId !== "ALL") {
+      const found = availableCompanies.find((c) => c.id === selectedCompanyId);
+      if (found) return found;
+    }
+    if (user?.company) return user.company;
+    if (availableCompanies.length > 0) return availableCompanies[0];
+    return {
+      id: "comp-default",
+      name: workshopConfig?.name || "MotoTaller TS7",
+      type: "TALLER_MOTOS",
+      slogan: workshopConfig?.slogan || "Repuestos & Taller",
+      nit: workshopConfig?.nit || "901.452.889-1",
+      phone: workshopConfig?.phone || "",
+      address: workshopConfig?.address || "",
+      receiptMessage: workshopConfig?.receiptMessage || "¡Gracias por su compra!",
+      logoUrl: workshopConfig?.logoUrl || "",
+    };
+  }, [selectedCompanyId, availableCompanies, user, workshopConfig]);
+
+  const isWorkshop = selectedCompanyId === "ALL" || activeCompany.type === "TALLER_MOTOS";
 
   useEffect(() => {
     if (user) {
@@ -297,7 +342,7 @@ export default function DashboardPage() {
         total: i.totalPrice || i.unitPrice * i.quantity,
       })),
       total: inv.total,
-      workshopConfig: workshopConfig || {
+      workshopConfig: activeCompany || workshopConfig || {
         name: "MotoTaller Maicao",
         slogan: "Especialistas en Reparación y Repuestos Multimarca",
         nit: "901.452.889-1",
@@ -319,13 +364,13 @@ export default function DashboardPage() {
       plate: q.motorcycle?.plate || undefined,
       motoModel: q.motorcycle?.model || undefined,
       items: (q.items || []).map((i: any) => ({
-        name: i.description || i.product?.name || "Repuesto",
+        name: i.description || i.product?.name || (isWorkshop ? "Repuesto" : "Producto"),
         quantity: i.quantity,
         unitPrice: i.unitPrice,
         total: i.totalPrice || i.unitPrice * i.quantity,
       })),
       total: q.total,
-      workshopConfig: workshopConfig || {
+      workshopConfig: activeCompany || workshopConfig || {
         name: "MotoTaller Maicao",
         slogan: "Especialistas en Reparación y Repuestos Multimarca",
         nit: "901.452.889-1",
@@ -420,6 +465,11 @@ export default function DashboardPage() {
     ];
 
     return allItems.filter((item) => {
+      // 0. Si el negocio activo es una tienda o minimarket (no taller de motos), ocultar Órdenes de Trabajo mecánicas
+      if (item.label === "Órdenes de Trabajo" && !isWorkshop) {
+        return false;
+      }
+
       // 1. Auditoría de Seguridad: SOLO SUPERADMIN (retirado para Trabajador y para Dueño/Admin)
       if (item.label === "Auditoría de Seguridad") {
         return user.role === "SUPERADMIN";
@@ -452,7 +502,7 @@ export default function DashboardPage() {
 
       return true;
     });
-  }, [user, products.length, invoices.length, workOrders, quotes.length, credits, workshopConfig]);
+  }, [user, products.length, invoices.length, workOrders, quotes.length, credits, workshopConfig, isWorkshop, activeCompany]);
 
   // Cambio seguro de módulo con actualización del path en la URL del navegador
   const navigateToTab = (tabName: string) => {
@@ -953,20 +1003,28 @@ export default function DashboardPage() {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  {workshopConfig?.logoUrl ? (
+                  {activeCompany?.logoUrl ? (
                     <img
-                      src={workshopConfig.logoUrl}
-                      alt="Logo Taller"
+                      src={activeCompany.logoUrl}
+                      alt="Logo Negocio"
                       className="w-10 h-10 rounded-xl object-contain bg-white/10 p-0.5 border border-white/20"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#5AA9E6] to-[#38BDF8] flex items-center justify-center">
-                      <Wrench className="w-5 h-5 text-white" />
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                      activeCompany.type === "TALLER_MOTOS"
+                        ? "bg-gradient-to-tr from-[#5AA9E6] to-[#38BDF8]"
+                        : "bg-gradient-to-tr from-[#34D399] to-[#10B981]"
+                    }`}>
+                      {activeCompany.type === "TALLER_MOTOS" ? (
+                        <Wrench className="w-5 h-5 text-white" />
+                      ) : (
+                        <Store className="w-5 h-5 text-white" />
+                      )}
                     </div>
                   )}
                   <div>
-                    <h2 className="font-bold text-sm text-white truncate">{workshopConfig?.name || "MotoTaller"}</h2>
-                    <p className="text-[11px] text-[#9CA3AF]">Menú del Taller</p>
+                    <h2 className="font-bold text-sm text-white truncate max-w-[160px]">{activeCompany?.name || "MotoTaller"}</h2>
+                    <p className="text-[11px] text-[#9CA3AF]">{activeCompany?.slogan || "Menú Comercial"}</p>
                   </div>
                 </div>
                 <button
@@ -1030,25 +1088,33 @@ export default function DashboardPage() {
       {/* Sidebar (Para pantallas de PC y Tablets) */}
       <aside className="w-[235px] glass-strong border-r border-white/[0.12] p-3.5 hidden md:flex flex-col justify-between shrink-0">
         <div className="space-y-4">
-          {/* Logo Taller (Foto personalizada o Icono) */}
+          {/* Logo Empresa / Negocio (Foto personalizada o Icono) */}
           <div className="flex items-center gap-2.5 px-1.5">
-            {workshopConfig?.logoUrl ? (
+            {activeCompany?.logoUrl ? (
               <img
-                src={workshopConfig.logoUrl}
-                alt="Logo Taller"
+                src={activeCompany.logoUrl}
+                alt="Logo Negocio"
                 className="w-8 h-8 rounded-lg object-contain bg-white/10 p-0.5 border border-white/20 shadow-lg shadow-black/40"
               />
             ) : (
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#5AA9E6] to-[#38BDF8] flex items-center justify-center shadow-lg shadow-[#5AA9E6]/30 shrink-0">
-                <Wrench className="w-4 h-4 text-white" />
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-lg shrink-0 ${
+                activeCompany.type === "TALLER_MOTOS"
+                  ? "bg-gradient-to-tr from-[#5AA9E6] to-[#38BDF8] shadow-[#5AA9E6]/30"
+                  : "bg-gradient-to-tr from-[#34D399] to-[#10B981] shadow-[#34D399]/30"
+              }`}>
+                {activeCompany.type === "TALLER_MOTOS" ? (
+                  <Wrench className="w-4 h-4 text-white" />
+                ) : (
+                  <Store className="w-4 h-4 text-white" />
+                )}
               </div>
             )}
             <div className="min-w-0">
               <h1 className="font-bold text-xs text-white tracking-wide font-[family-name:var(--font-space-grotesk)] truncate">
-                {workshopConfig?.name || "MotoTaller"}
+                {activeCompany?.name || "MotoTaller"}
               </h1>
               <p className="text-[10px] text-[#9CA3AF] truncate">
-                {workshopConfig?.slogan || "Repuestos & Taller"}
+                {activeCompany?.slogan || "Repuestos & Taller"}
               </p>
             </div>
           </div>
@@ -1123,15 +1189,42 @@ export default function DashboardPage() {
               <Menu className="w-4 h-4" />
             </button>
 
-            <div className="flex items-center gap-2 w-48 sm:w-72">
+            <div className="flex items-center gap-2 w-44 sm:w-64">
               <Input
                 icon={<Search className="w-3.5 h-3.5" />}
-                placeholder="Buscar repuesto, placa, SKU..."
+                placeholder={isWorkshop ? "Buscar repuesto, placa, SKU..." : "Buscar producto, código, SKU..."}
                 value={quickSearch}
                 onChange={(e) => setQuickSearch(e.target.value)}
                 className="h-7.5 text-xs"
               />
             </div>
+
+            {/* Selector de Empresa Activa (Multi-Tenant) */}
+            {user.role === "SUPERADMIN" ? (
+              <div className="hidden md:flex items-center gap-1.5 px-2 py-1 rounded-xl bg-white/[0.04] border border-[#5AA9E6]/30 hover:border-[#5AA9E6]/60 transition-colors">
+                <Building2 className="w-3.5 h-3.5 text-[#5AA9E6] shrink-0" />
+                <span className="text-[10px] text-[#94A3B8] uppercase font-bold tracking-wider hidden lg:inline">Empresa:</span>
+                <select
+                  value={selectedCompanyId}
+                  onChange={(e) => setSelectedCompanyId(e.target.value)}
+                  className="bg-transparent text-xs text-[#EAF4F4] font-bold focus:outline-none cursor-pointer pr-1"
+                >
+                  <option value="ALL" className="bg-[#222831] text-white">🏢 Todas las Empresas</option>
+                  {availableCompanies.map((c) => (
+                    <option key={c.id} value={c.id} className="bg-[#222831] text-white">
+                      {c.type === "TALLER_MOTOS" ? "🏍️ " : "🏪 "} {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                <span className="text-xs">{activeCompany.type === "TALLER_MOTOS" ? "🏍️" : "🏪"}</span>
+                <span className="text-xs text-white font-semibold truncate max-w-[160px]">
+                  {activeCompany.name}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
@@ -1146,16 +1239,18 @@ export default function DashboardPage() {
               <span className="hidden sm:inline">Cotización</span>
             </Button>
 
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setIsOrderModalOpen(true)}
-              className="h-7.5 px-2.5 text-xs font-semibold cursor-pointer"
-              title="Asignar repuestos a moto / Orden de trabajo"
-            >
-              <Package className="w-3.5 h-3.5 sm:mr-1 text-[#5AA9E6]" />
-              <span className="hidden sm:inline">Orden de Trabajo</span>
-            </Button>
+            {isWorkshop && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setIsOrderModalOpen(true)}
+                className="h-7.5 px-2.5 text-xs font-semibold cursor-pointer"
+                title="Asignar repuestos a moto / Orden de trabajo"
+              >
+                <Package className="w-3.5 h-3.5 sm:mr-1 text-[#5AA9E6]" />
+                <span className="hidden sm:inline">Orden de Trabajo</span>
+              </Button>
+            )}
 
             <Button
               variant="primary"

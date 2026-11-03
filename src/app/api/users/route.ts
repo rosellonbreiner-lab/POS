@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser, hashPassword } from "@/lib/auth";
-import { getSettings, saveSettings } from "@/app/api/settings/route";
+import { getSettings, saveSettings } from "@/lib/settings";
 import { UserRole } from "@prisma/client";
 
 export async function GET() {
@@ -28,13 +28,27 @@ export async function GET() {
 
     const settings = getSettings();
     const credentials = settings.userCredentials || {};
+    const userCompanies = settings.userCompanies || {};
+    const companies = settings.companies || [];
 
-    const usersWithCredentials = users.map((u) => ({
-      ...u,
-      password: credentials[u.email.toLowerCase()] || credentials[u.email] || "No registrada",
-    }));
+    const usersWithCredentials = users.map((u) => {
+      const emailLower = u.email.toLowerCase();
+      const assignedCompId = userCompanies[emailLower] || (u.role === "SUPERADMIN" ? "ALL" : companies[0]?.id || "");
+      const foundCompany = companies.find((c: any) => c.id === assignedCompId);
 
-    return NextResponse.json({ users: usersWithCredentials });
+      return {
+        ...u,
+        password: credentials[emailLower] || credentials[u.email] || "No registrada",
+        companyId: assignedCompId,
+        companyName: assignedCompId === "ALL" ? "Todas las Empresas (Superadmin)" : (foundCompany?.name || "Empresa por Defecto"),
+        companyType: foundCompany?.type || (assignedCompId === "ALL" ? "GLOBAL" : "TALLER_MOTOS"),
+      };
+    });
+
+    return NextResponse.json({
+      users: usersWithCredentials,
+      companies,
+    });
   } catch (error: any) {
     console.error("Error al obtener usuarios:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -52,7 +66,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { name, email, password, role } = body;
+    const { name, email, password, role, companyId } = body;
 
     if (!name || !email || !password || !role) {
       return NextResponse.json(
@@ -84,23 +98,41 @@ export async function POST(request: Request) {
       },
     });
 
-    // Guardar la credencial en el archivo de configuración para que el Superadmin pueda consultarla
+    // Guardar credenciales y empresa asignada en workshop-settings.json
     const settings = getSettings();
     const updatedCredentials = {
       ...(settings.userCredentials || {}),
       [emailClean]: password,
     };
-    saveSettings({ ...settings, userCredentials: updatedCredentials });
+
+    const targetCompanyId = role === "SUPERADMIN"
+      ? "ALL"
+      : (companyId || settings.companies?.[0]?.id || "comp-mototaller");
+
+    const updatedUserCompanies = {
+      ...(settings.userCompanies || {}),
+      [emailClean]: targetCompanyId,
+    };
+
+    saveSettings({
+      ...settings,
+      userCredentials: updatedCredentials,
+      userCompanies: updatedUserCompanies,
+    });
+
+    const assignedCompany = settings.companies?.find((c: any) => c.id === targetCompanyId);
 
     return NextResponse.json({
       success: true,
-      message: `Usuario ${newUser.name} creado exitosamente.`,
+      message: `Usuario ${newUser.name} creado exitosamente y asignado a "${assignedCompany?.name || targetCompanyId}".`,
       user: {
         id: newUser.id,
         name: newUser.name,
         email: newUser.email,
         role: newUser.role,
         password,
+        companyId: targetCompanyId,
+        companyName: assignedCompany?.name || targetCompanyId,
       },
     });
   } catch (error: any) {
@@ -108,4 +140,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-

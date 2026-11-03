@@ -28,6 +28,9 @@ import {
   Pencil,
   Receipt,
   Clock,
+  Building2,
+  Store,
+  Wrench,
 } from "lucide-react";
 import { TicketModal, TicketData } from "@/components/common/TicketModal";
 
@@ -40,7 +43,26 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
   const isSuper = user?.role === "SUPERADMIN";
 
   // Pestañas de configuración
-  const [activeTab, setActiveTab] = useState<"TALLER" | "USUARIOS" | "PERMISOS" | "LIMPIEZA">("TALLER");
+  const [activeTab, setActiveTab] = useState<"EMPRESAS" | "TALLER" | "USUARIOS" | "PERMISOS" | "LIMPIEZA">(
+    isSuper ? "EMPRESAS" : "TALLER"
+  );
+
+  // Lista de empresas registradas (Multi-Empresa)
+  const [companiesList, setCompaniesList] = useState<any[]>([]);
+  const [isCreateCompanyOpen, setIsCreateCompanyOpen] = useState(false);
+  const [isEditCompanyOpen, setIsEditCompanyOpen] = useState(false);
+  const [companyToEdit, setCompanyToEdit] = useState<any | null>(null);
+  const [companyToDelete, setCompanyToDelete] = useState<any | null>(null);
+  const [companyActionLoading, setCompanyActionLoading] = useState(false);
+  const [newCompanyData, setNewCompanyData] = useState({
+    name: "",
+    type: "TALLER_MOTOS",
+    slogan: "",
+    nit: "",
+    phone: "",
+    address: "",
+    receiptMessage: "¡Gracias por su compra! Vuelva pronto.",
+  });
 
   // Configuración general
   const [config, setConfig] = useState<any>({
@@ -106,6 +128,7 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
     email: "",
     password: "",
     role: "TRABAJADOR",
+    companyId: "",
   });
   const [userToEdit, setUserToEdit] = useState<{
     id: string;
@@ -114,6 +137,7 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
     role: string;
     password: string;
     newPassword?: string;
+    companyId?: string;
   } | null>(null);
   const [isEditUserOpen, setIsEditUserOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<any | null>(null);
@@ -126,12 +150,30 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
   const [resetLoading, setResetLoading] = useState(false);
   const [isResetConfirmModalOpen, setIsResetConfirmModalOpen] = useState(false);
 
+  const loadCompanies = async () => {
+    try {
+      const res = await fetch("/api/companies");
+      const data = await res.json();
+      if (data.companies) {
+        setCompaniesList(data.companies);
+        if (!newUserData.companyId && data.companies.length > 0) {
+          setNewUserData((prev) => ({ ...prev, companyId: data.companies[0].id }));
+        }
+      }
+    } catch (e) {
+      console.error("Error loading companies:", e);
+    }
+  };
+
   const loadSettings = async () => {
     try {
       const res = await fetch("/api/settings");
       const data = await res.json();
       if (data.config) {
         setConfig(data.config);
+        if (data.config.companies) {
+          setCompaniesList(data.config.companies);
+        }
       }
     } catch (e) {
       console.error("Error loading settings:", e);
@@ -146,6 +188,9 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
       if (data.users) {
         setUsersList(data.users);
       }
+      if (data.companies) {
+        setCompaniesList(data.companies);
+      }
     } catch (e) {
       console.error("Error loading users:", e);
     }
@@ -153,6 +198,7 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
 
   useEffect(() => {
     loadSettings();
+    loadCompanies();
     if (isSuper) {
       loadUsers();
     }
@@ -257,6 +303,97 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
     }
   };
 
+  const handleCreateCompany = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCompanyData.name.trim() || !newCompanyData.nit.trim()) {
+      setMsg({ type: "error", text: "Nombre de empresa y NIT son obligatorios." });
+      return;
+    }
+
+    setCompanyActionLoading(true);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/companies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newCompanyData),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setMsg({ type: "success", text: data.message || "Empresa registrada exitosamente." });
+      setIsCreateCompanyOpen(false);
+      setNewCompanyData({
+        name: "",
+        type: "TALLER_MOTOS",
+        slogan: "",
+        nit: "",
+        phone: "",
+        address: "",
+        receiptMessage: "¡Gracias por su compra! Vuelva pronto.",
+      });
+      await loadCompanies();
+      await loadSettings();
+      if (onRefreshGlobal) onRefreshGlobal();
+    } catch (err: any) {
+      setMsg({ type: "error", text: err.message || "Error al registrar empresa" });
+    } finally {
+      setCompanyActionLoading(false);
+    }
+  };
+
+  const handleSaveEditCompany = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!companyToEdit) return;
+
+    setCompanyActionLoading(true);
+    setMsg(null);
+    try {
+      const res = await fetch(`/api/companies/${companyToEdit.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(companyToEdit),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setMsg({ type: "success", text: data.message || "Empresa actualizada exitosamente." });
+      setIsEditCompanyOpen(false);
+      setCompanyToEdit(null);
+      await loadCompanies();
+      await loadSettings();
+      if (onRefreshGlobal) onRefreshGlobal();
+    } catch (err: any) {
+      setMsg({ type: "error", text: err.message || "Error al actualizar empresa" });
+    } finally {
+      setCompanyActionLoading(false);
+    }
+  };
+
+  const handleDeleteCompany = async () => {
+    if (!companyToDelete) return;
+
+    setCompanyActionLoading(true);
+    setMsg(null);
+    try {
+      const res = await fetch(`/api/companies/${companyToDelete.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setMsg({ type: "success", text: data.message || "Empresa eliminada exitosamente." });
+      setCompanyToDelete(null);
+      await loadCompanies();
+      await loadSettings();
+      if (onRefreshGlobal) onRefreshGlobal();
+    } catch (err: any) {
+      setMsg({ type: "error", text: err.message || "Error al eliminar empresa" });
+    } finally {
+      setCompanyActionLoading(false);
+    }
+  };
+
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setUserActionLoading(true);
@@ -265,14 +402,23 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
       const res = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newUserData),
+        body: JSON.stringify({
+          ...newUserData,
+          companyId: newUserData.companyId || (companiesList[0]?.id || "comp-mototaller"),
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
       setMsg({ type: "success", text: data.message || "Usuario creado exitosamente." });
       setIsCreateUserOpen(false);
-      setNewUserData({ name: "", email: "", password: "", role: "TRABAJADOR" });
+      setNewUserData({
+        name: "",
+        email: "",
+        password: "",
+        role: "TRABAJADOR",
+        companyId: companiesList[0]?.id || "",
+      });
       await loadUsers();
     } catch (err: any) {
       setMsg({ type: "error", text: err.message || "Error al crear usuario" });
@@ -288,6 +434,7 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
       email: u.email,
       role: u.role,
       password: u.password,
+      companyId: u.companyId || (companiesList[0]?.id || ""),
       newPassword: "",
     });
     setIsEditUserOpen(true);
@@ -307,6 +454,7 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
           name: userToEdit.name,
           email: userToEdit.email,
           role: userToEdit.role,
+          companyId: userToEdit.companyId,
           newPassword: userToEdit.newPassword ? userToEdit.newPassword.trim() : undefined,
         }),
       });
@@ -449,6 +597,22 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
         <div className="flex flex-wrap items-center gap-1.5 p-1 bg-white/[0.03] rounded-xl border border-white/[0.08]">
           <button
             type="button"
+            onClick={() => setActiveTab("EMPRESAS")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
+              activeTab === "EMPRESAS"
+                ? "bg-[#5AA9E6] text-black shadow-sm"
+                : "text-[#94A3B8] hover:text-white"
+            }`}
+          >
+            <Building2 className="w-3.5 h-3.5" />
+            <span>Gestión de Empresas & Negocios</span>
+            <Badge variant="primary" className="text-[10px] py-0 px-1.5">
+              {companiesList.length}
+            </Badge>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setActiveTab("TALLER")}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
               activeTab === "TALLER"
@@ -501,6 +665,162 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
             <Trash2 className="w-3.5 h-3.5" />
             <span>Limpieza de Pruebas & Restablecimiento</span>
           </button>
+        </div>
+      )}
+
+      {/* PESTAÑA 0: GESTIÓN DE EMPRESAS & MICROEMPRESAS (SOLO SUPERADMIN) */}
+      {isSuper && activeTab === "EMPRESAS" && (
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 gap-2">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-[#5AA9E6]" />
+                  Gestión de Empresas & Microempresas Registradas
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Crea y administra múltiples negocios (talleres de motos, tiendas comerciales, ferreterías o minimarkets). Cada empresa cuenta con datos independientes, tickets térmicos con su propia razón social y usuarios propios.
+                </CardDescription>
+              </div>
+
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setIsCreateCompanyOpen(true)}
+                className="text-xs font-semibold shrink-0"
+              >
+                <Plus className="w-3.5 h-3.5 mr-1" />
+                Nueva Empresa / Negocio
+              </Button>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              {/* Resumen de Negocios */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+                  <p className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-semibold">Total Negocios</p>
+                  <p className="text-xl font-bold text-white mt-1">{companiesList.length}</p>
+                </div>
+                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+                  <p className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-semibold">Talleres de Motos</p>
+                  <p className="text-xl font-bold text-[#5AA9E6] mt-1">
+                    {companiesList.filter((c) => c.type === "TALLER_MOTOS").length}
+                  </p>
+                </div>
+                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+                  <p className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-semibold">Tiendas & Comercios</p>
+                  <p className="text-xl font-bold text-[#34D399] mt-1">
+                    {companiesList.filter((c) => c.type !== "TALLER_MOTOS").length}
+                  </p>
+                </div>
+                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+                  <p className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-semibold">Usuarios Asignados</p>
+                  <p className="text-xl font-bold text-[#22D3EE] mt-1">{usersList.length}</p>
+                </div>
+              </div>
+
+              {/* Grid de Empresas */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
+                {companiesList.map((comp) => {
+                  const assignedUsers = usersList.filter(
+                    (u) => u.companyId === comp.id
+                  );
+                  const isWorkshop = comp.type === "TALLER_MOTOS";
+
+                  return (
+                    <div
+                      key={comp.id}
+                      className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:border-[#5AA9E6]/40 transition-all flex flex-col justify-between space-y-3"
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2.5">
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
+                              isWorkshop
+                                ? "bg-[#5AA9E6]/15 border-[#5AA9E6]/30 text-[#5AA9E6]"
+                                : "bg-[#34D399]/15 border-[#34D399]/30 text-[#34D399]"
+                            }`}>
+                              {isWorkshop ? <Wrench className="w-4 h-4" /> : <Store className="w-4 h-4" />}
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-sm text-white">{comp.name}</h4>
+                              <p className="text-[11px] text-[#94A3B8] line-clamp-1">
+                                {comp.slogan || "Sin eslogan registrado"}
+                              </p>
+                            </div>
+                          </div>
+
+                          <Badge
+                            variant={isWorkshop ? "primary" : "success"}
+                            className="text-[10px] font-semibold shrink-0"
+                          >
+                            {isWorkshop ? "🏍️ Taller de Motos" : "🏪 Tienda / Comercio"}
+                          </Badge>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-white/[0.04]">
+                          <div>
+                            <span className="text-[10px] text-[#94A3B8] block">NIT / RUT:</span>
+                            <span className="font-mono text-white text-[11px]">{comp.nit}</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-[#94A3B8] block">Teléfono:</span>
+                            <span className="text-[#EAF4F4] text-[11px]">{comp.phone || "No registrado"}</span>
+                          </div>
+                          <div className="col-span-2">
+                            <span className="text-[10px] text-[#94A3B8] block">Dirección:</span>
+                            <span className="text-[#EAF4F4] text-[11px] truncate block">
+                              {comp.address || "No registrada"}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="p-2 rounded-lg bg-black/30 border border-white/[0.04] text-[11px] text-[#94A3B8]">
+                          <span className="font-semibold text-white block text-[10px]">Mensaje en Ticket:</span>
+                          <span className="italic line-clamp-1">"{comp.receiptMessage}"</span>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 text-xs text-[#94A3B8]">
+                          <Users className="w-3.5 h-3.5 text-[#5AA9E6]" />
+                          <span>
+                            <b>{assignedUsers.length}</b> usuario(s) asignado(s)
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                              setCompanyToEdit(comp);
+                              setIsEditCompanyOpen(true);
+                            }}
+                            className="h-7 text-[11px] px-2.5 cursor-pointer hover:bg-[#5AA9E6]/20 hover:text-[#5AA9E6]"
+                          >
+                            <Pencil className="w-3 h-3 mr-1" />
+                            Editar
+                          </Button>
+
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={() => setCompanyToDelete(comp)}
+                            disabled={companiesList.length <= 1}
+                            className="h-7 text-[11px] px-2 cursor-pointer bg-[#F87171]/15 hover:bg-[#F87171]/25 text-[#F87171] border border-[#F87171]/30 disabled:opacity-20 disabled:cursor-not-allowed"
+                            title={companiesList.length <= 1 ? "No puedes eliminar el único negocio" : "Eliminar empresa"}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 
@@ -710,6 +1030,7 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
                     <tr>
                       <th className="pb-2.5 font-semibold">Nombre de Usuario</th>
                       <th className="pb-2.5 font-semibold">Correo de Ingreso</th>
+                      <th className="pb-2.5 font-semibold">Empresa Asignada</th>
                       <th className="pb-2.5 font-semibold">Rol Asignado</th>
                       <th className="pb-2.5 font-semibold">Contraseña Actual</th>
                       <th className="pb-2.5 font-semibold text-right">Acción</th>
@@ -718,6 +1039,8 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
                   <tbody className="divide-y divide-white/[0.04]">
                     {usersList.map((u) => {
                       const isRevealed = Boolean(visiblePasswords[u.id]);
+                      const isWorkshop = u.companyType === "TALLER_MOTOS";
+
                       return (
                         <tr key={u.id} className="hover:bg-white/[0.02] transition-colors">
                           <td className="py-2.5 font-medium text-white">
@@ -725,6 +1048,20 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
                           </td>
                           <td className="py-2.5 text-[#94A3B8] font-mono">
                             {u.email}
+                          </td>
+                          <td className="py-2.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs">
+                                {u.role === "SUPERADMIN"
+                                  ? "🌐"
+                                  : isWorkshop
+                                  ? "🏍️"
+                                  : "🏪"}
+                              </span>
+                              <span className="text-xs text-white font-medium">
+                                {u.companyName || "No asignada"}
+                              </span>
+                            </div>
                           </td>
                           <td className="py-2.5">
                             <Badge
@@ -1400,10 +1737,33 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
                   className="w-full h-8 px-2.5 text-xs text-[#EAF4F4] bg-[#222831]/80 border border-[#5AA9E6]/30 rounded-xl focus:outline-none focus:border-[#5AA9E6]"
                 >
                   <option value="TRABAJADOR">Trabajador (Operador)</option>
-                  <option value="ADMIN">Dueño (Administrador del Taller)</option>
+                  <option value="ADMIN">Dueño (Administrador del Negocio)</option>
                   <option value="SUPERADMIN">Super Usuario (Control Total)</option>
                 </select>
               </div>
+
+              {newUserData.role !== "SUPERADMIN" && (
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#94A3B8] block">
+                    🏢 Empresa / Negocio Asignado
+                  </label>
+                  <select
+                    value={newUserData.companyId || (companiesList[0]?.id || "")}
+                    onChange={(e) => setNewUserData({ ...newUserData, companyId: e.target.value })}
+                    className="w-full h-8 px-2.5 text-xs text-[#EAF4F4] bg-[#222831]/80 border border-[#5AA9E6]/30 rounded-xl focus:outline-none focus:border-[#5AA9E6]"
+                  >
+                    {companiesList.map((comp) => (
+                      <option key={comp.id} value={comp.id}>
+                        {comp.type === "TALLER_MOTOS" ? "🏍️ Taller: " : "🏪 Tienda: "}
+                        {comp.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-[#94A3B8]">
+                    El usuario operará exclusivamente con los datos, tickets y módulos de este negocio.
+                  </p>
+                </div>
+              )}
 
               <div className="flex justify-end gap-2 pt-2">
                 <Button
@@ -1482,10 +1842,30 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
                   className="w-full h-8 px-2.5 text-xs text-[#EAF4F4] bg-[#222831]/80 border border-[#5AA9E6]/30 rounded-xl focus:outline-none focus:border-[#5AA9E6]"
                 >
                   <option value="TRABAJADOR">Trabajador (Operador)</option>
-                  <option value="ADMIN">Dueño (Administrador del Taller)</option>
+                  <option value="ADMIN">Dueño (Administrador del Negocio)</option>
                   <option value="SUPERADMIN">Super Usuario (Control Total)</option>
                 </select>
               </div>
+
+              {userToEdit.role !== "SUPERADMIN" && (
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#94A3B8] block">
+                    🏢 Empresa / Negocio Asignado
+                  </label>
+                  <select
+                    value={userToEdit.companyId || (companiesList[0]?.id || "")}
+                    onChange={(e) => setUserToEdit({ ...userToEdit, companyId: e.target.value })}
+                    className="w-full h-8 px-2.5 text-xs text-[#EAF4F4] bg-[#222831]/80 border border-[#5AA9E6]/30 rounded-xl focus:outline-none focus:border-[#5AA9E6]"
+                  >
+                    {companiesList.map((comp) => (
+                      <option key={comp.id} value={comp.id}>
+                        {comp.type === "TALLER_MOTOS" ? "🏍️ Taller: " : "🏪 Tienda: "}
+                        {comp.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
@@ -1567,6 +1947,318 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
                 className="bg-[#F87171] hover:bg-[#EF4444] text-white"
               >
                 {userActionLoading ? "Eliminando..." : "Eliminar Definitivamente"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Registrar Nueva Empresa / Negocio */}
+      {isCreateCompanyOpen && (
+        <div
+          className="fixed inset-0 z-60 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsCreateCompanyOpen(false);
+          }}
+        >
+          <div className="w-full max-w-lg bg-[#222831] border border-[#5AA9E6]/40 rounded-2xl shadow-2xl p-5 text-[#EAF4F4] space-y-4">
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-[#5AA9E6]" />
+                Registrar Nueva Microempresa o Negocio
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsCreateCompanyOpen(false)}
+                className="text-[#94A3B8] hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateCompany} className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#94A3B8] block">
+                    Nombre del Negocio / Empresa *
+                  </label>
+                  <Input
+                    required
+                    placeholder="Ej. Minimarket La Economía"
+                    value={newCompanyData.name}
+                    onChange={(e) => setNewCompanyData({ ...newCompanyData, name: e.target.value })}
+                    className="h-8 text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#94A3B8] block">
+                    Tipo de Actividad / Ramo *
+                  </label>
+                  <select
+                    value={newCompanyData.type}
+                    onChange={(e) => setNewCompanyData({ ...newCompanyData, type: e.target.value })}
+                    className="w-full h-8 px-2.5 text-xs text-[#EAF4F4] bg-[#222831]/80 border border-[#5AA9E6]/30 rounded-xl focus:outline-none focus:border-[#5AA9E6]"
+                  >
+                    <option value="TALLER_MOTOS">🏍️ Taller de Motos & Repuestos</option>
+                    <option value="TIENDA_COMERCIO">🏪 Tienda de Comercio & Minimarket</option>
+                    <option value="FERRETERIA">🔨 Ferretería & Materiales</option>
+                    <option value="COMERCIO_GENERAL">🛒 Comercio General / Servicios</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#94A3B8] block">
+                    NIT / RUT / Cédula Fiscal *
+                  </label>
+                  <Input
+                    required
+                    placeholder="Ej. 901.888.777-1"
+                    value={newCompanyData.nit}
+                    onChange={(e) => setNewCompanyData({ ...newCompanyData, nit: e.target.value })}
+                    className="h-8 text-xs font-mono"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#94A3B8] block">
+                    Teléfono / WhatsApp de Contacto
+                  </label>
+                  <Input
+                    placeholder="Ej. (+57) 315 123 4567"
+                    value={newCompanyData.phone}
+                    onChange={(e) => setNewCompanyData({ ...newCompanyData, phone: e.target.value })}
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#94A3B8] block">
+                  Dirección Física del Local
+                </label>
+                <Input
+                  placeholder="Ej. Calle 12 # 5-20, Centro Comercial"
+                  value={newCompanyData.address}
+                  onChange={(e) => setNewCompanyData({ ...newCompanyData, address: e.target.value })}
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#94A3B8] block">
+                  Eslogan Comercial
+                </label>
+                <Input
+                  placeholder="Ej. Variedad, Calidad y Economía para tu Familia"
+                  value={newCompanyData.slogan}
+                  onChange={(e) => setNewCompanyData({ ...newCompanyData, slogan: e.target.value })}
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#94A3B8] block">
+                  Mensaje Personalizado en Tickets de Venta
+                </label>
+                <Input
+                  placeholder="Ej. ¡Gracias por preferirnos! Conserve este recibo."
+                  value={newCompanyData.receiptMessage}
+                  onChange={(e) => setNewCompanyData({ ...newCompanyData, receiptMessage: e.target.value })}
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-white/[0.08]">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setIsCreateCompanyOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" variant="primary" size="sm" disabled={companyActionLoading}>
+                  {companyActionLoading ? "Guardando..." : "Registrar Empresa"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Editar Empresa */}
+      {isEditCompanyOpen && companyToEdit && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#222831] border border-[#5AA9E6]/40 rounded-2xl p-5 max-w-lg w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+              <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                <Pencil className="w-4 h-4 text-[#5AA9E6]" />
+                Modificar Empresa: {companyToEdit.name}
+              </h4>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditCompanyOpen(false);
+                  setCompanyToEdit(null);
+                }}
+                className="text-[#94A3B8] hover:text-white text-xs font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditCompany} className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#94A3B8] block">
+                    Nombre del Negocio *
+                  </label>
+                  <Input
+                    required
+                    value={companyToEdit.name}
+                    onChange={(e) => setCompanyToEdit({ ...companyToEdit, name: e.target.value })}
+                    className="h-8 text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#94A3B8] block">
+                    Tipo de Actividad *
+                  </label>
+                  <select
+                    value={companyToEdit.type}
+                    onChange={(e) => setCompanyToEdit({ ...companyToEdit, type: e.target.value })}
+                    className="w-full h-8 px-2.5 text-xs text-[#EAF4F4] bg-[#222831]/80 border border-[#5AA9E6]/30 rounded-xl focus:outline-none focus:border-[#5AA9E6]"
+                  >
+                    <option value="TALLER_MOTOS">🏍️ Taller de Motos & Repuestos</option>
+                    <option value="TIENDA_COMERCIO">🏪 Tienda de Comercio & Minimarket</option>
+                    <option value="FERRETERIA">🔨 Ferretería & Materiales</option>
+                    <option value="COMERCIO_GENERAL">🛒 Comercio General / Servicios</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#94A3B8] block">
+                    NIT / RUT *
+                  </label>
+                  <Input
+                    required
+                    value={companyToEdit.nit}
+                    onChange={(e) => setCompanyToEdit({ ...companyToEdit, nit: e.target.value })}
+                    className="h-8 text-xs font-mono"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#94A3B8] block">
+                    Teléfono
+                  </label>
+                  <Input
+                    value={companyToEdit.phone || ""}
+                    onChange={(e) => setCompanyToEdit({ ...companyToEdit, phone: e.target.value })}
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#94A3B8] block">
+                  Dirección
+                </label>
+                <Input
+                  value={companyToEdit.address || ""}
+                  onChange={(e) => setCompanyToEdit({ ...companyToEdit, address: e.target.value })}
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#94A3B8] block">
+                  Eslogan Comercial
+                </label>
+                <Input
+                  value={companyToEdit.slogan || ""}
+                  onChange={(e) => setCompanyToEdit({ ...companyToEdit, slogan: e.target.value })}
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-[#94A3B8] block">
+                  Mensaje en Ticket
+                </label>
+                <Input
+                  value={companyToEdit.receiptMessage || ""}
+                  onChange={(e) => setCompanyToEdit({ ...companyToEdit, receiptMessage: e.target.value })}
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-white/[0.08]">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setIsEditCompanyOpen(false);
+                    setCompanyToEdit(null);
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" variant="primary" size="sm" disabled={companyActionLoading}>
+                  {companyActionLoading ? "Guardando..." : "Guardar Cambios"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirmar Eliminación de Empresa */}
+      {companyToDelete && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#222831] border border-[#F87171]/40 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-[#F87171]">
+              <div className="w-10 h-10 rounded-xl bg-[#F87171]/15 border border-[#F87171]/30 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-[#F87171]" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-white">Eliminar Empresa</h4>
+                <p className="text-xs text-[#94A3B8]">Esta acción no se puede deshacer</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-[#EAF4F4] leading-relaxed">
+              ¿Estás seguro de que deseas eliminar permanentemente la empresa{" "}
+              <strong className="text-white font-bold">{companyToDelete.name}</strong>{" "}
+              (NIT: <span className="font-mono text-[#5AA9E6]">{companyToDelete.nit}</span>)?
+            </p>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-white/[0.08]">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setCompanyToDelete(null)}
+                disabled={companyActionLoading}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                onClick={handleDeleteCompany}
+                disabled={companyActionLoading}
+                className="bg-[#F87171] hover:bg-[#EF4444] text-white"
+              >
+                {companyActionLoading ? "Eliminando..." : "Eliminar Empresa"}
               </Button>
             </div>
           </div>
