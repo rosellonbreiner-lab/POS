@@ -40,7 +40,9 @@ USUARIOS_Y_CONTRASEÑAS*.txt
 *.mp4
 *.mov
 WhatsApp*
-backup/
+/backup/
+/backups/
+*.motobackup
 
 # Base de datos SQLite local (No subir base de datos local con datos de prueba)
 *.db

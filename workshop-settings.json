@@ -18,19 +18,37 @@
       "logoUrl": "",
       "receiptMessage": "¡Gracias por confiar en nosotros! Garantía de 30 días en repuestos con este ticket.",
       "createdAt": "2026-10-28T00:00:00.000Z"
+    },
+    {
+      "id": "comp-ferromax-3613",
+      "name": "ferromax",
+      "type": "FERRETERIA",
+      "slogan": "",
+      "nit": "1121527471",
+      "phone": "3108997775",
+      "address": "",
+      "logoUrl": "",
+      "receiptMessage": "¡Gracias por su compra! Vuelva pronto.",
+      "createdAt": "2026-11-03T19:14:43.613Z"
     }
   ],
   "userCompanies": {
     "super@mototaller.co": "ALL",
     "admin@mototaller.co": "ALL",
     "dueno@mototaller.co": "comp-mototaller",
-    "trabajador@mototaller.co": "comp-mototaller"
+    "trabajador@mototaller.co": "comp-mototaller",
+    "barosellon@ferro.co": "comp-ferromax-3613"
   },
+  "invoiceCompanies": {},
+  "productCompanies": {},
+  "orderCompanies": {},
+  "quoteCompanies": {},
   "userCredentials": {
     "super@mototaller.co": "SuperAdmin2026!",
     "admin@mototaller.co": "SuperAdmin2026!",
     "dueno@mototaller.co": "AdminDueño123!",
-    "trabajador@mototaller.co": "Trabajador123!"
+    "trabajador@mototaller.co": "Trabajador123!",
+    "barosellon@ferro.co": "123456"
   },
   "roleModulePermissions": {
     "ADMIN": {
@@ -69,5 +87,12 @@
       "arqueoCaja": false,
       "escanerCamara": true
     }
+  },
+  "backupSettings": {
+    "enabled": true,
+    "intervalHours": 24,
+    "maxBackupsToKeep": 7,
+    "lastBackupAt": "2026-11-03T19:17:46.658Z",
+    "nextBackupAt": "2026-11-04T19:17:46.731Z"
   }
 }

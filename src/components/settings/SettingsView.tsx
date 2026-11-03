@@ -31,6 +31,12 @@ import {
   Building2,
   Store,
   Wrench,
+  Database,
+  Download,
+  RefreshCw,
+  FileArchive,
+  Shield,
+  HardDrive,
 } from "lucide-react";
 import { TicketModal, TicketData } from "@/components/common/TicketModal";
 
@@ -43,7 +49,7 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
   const isSuper = user?.role === "SUPERADMIN";
 
   // Pestañas de configuración
-  const [activeTab, setActiveTab] = useState<"EMPRESAS" | "TALLER" | "USUARIOS" | "PERMISOS" | "LIMPIEZA">(
+  const [activeTab, setActiveTab] = useState<"EMPRESAS" | "TALLER" | "USUARIOS" | "PERMISOS" | "BACKUPS" | "LIMPIEZA">(
     isSuper ? "EMPRESAS" : "TALLER"
   );
 
@@ -150,6 +156,151 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
   const [resetLoading, setResetLoading] = useState(false);
   const [isResetConfirmModalOpen, setIsResetConfirmModalOpen] = useState(false);
 
+  // Estados de Copias de Seguridad (Backups Cifrados AES-256)
+  const [backupConfig, setBackupConfig] = useState<any>({
+    enabled: true,
+    intervalHours: 24,
+    maxBackupsToKeep: 7,
+    lastBackupAt: null,
+    nextBackupAt: null,
+  });
+  const [storedBackups, setStoredBackups] = useState<any[]>([]);
+  const [loadingBackups, setLoadingBackups] = useState(false);
+  const [creatingBackup, setCreatingBackup] = useState(false);
+  const [savingBackupConfig, setSavingBackupConfig] = useState(false);
+  const [backupToRestore, setBackupToRestore] = useState<any | null>(null);
+  const [restoreConfirmationCode, setRestoreConfirmationCode] = useState("");
+  const [restoreFile, setRestoreFile] = useState<File | null>(null);
+  const [restoringBackup, setRestoringBackup] = useState(false);
+  const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
+  const [backupToDelete, setBackupToDelete] = useState<any | null>(null);
+  const [deletingBackup, setDeletingBackup] = useState(false);
+
+  const loadBackups = async () => {
+    setLoadingBackups(true);
+    try {
+      const res = await fetch("/api/backup");
+      const data = await res.json();
+      if (data.config) setBackupConfig(data.config);
+      if (data.backups) setStoredBackups(data.backups);
+    } catch (e) {
+      console.error("Error loading backups:", e);
+    } finally {
+      setLoadingBackups(false);
+    }
+  };
+
+  const handleCreateBackupNow = async () => {
+    setCreatingBackup(true);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/backup", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setMsg({ type: "success", text: `¡Copia de seguridad cifrada (${data.backup?.filename}) creada exitosamente!` });
+      await loadBackups();
+      // Iniciar descarga automáticamente al navegador
+      if (data.backup?.filename) {
+        window.open(`/api/backup/download?filename=${encodeURIComponent(data.backup.filename)}`, "_blank");
+      }
+    } catch (err: any) {
+      setMsg({ type: "error", text: err.message || "Error al crear copia de seguridad." });
+    } finally {
+      setCreatingBackup(false);
+    }
+  };
+
+  const handleSaveBackupConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingBackupConfig(true);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/backup", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(backupConfig),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setMsg({ type: "success", text: "¡Preferencias de copias automáticas guardadas exitosamente!" });
+      if (data.config) setBackupConfig(data.config);
+    } catch (err: any) {
+      setMsg({ type: "error", text: err.message || "Error al guardar configuración de backup." });
+    } finally {
+      setSavingBackupConfig(false);
+    }
+  };
+
+  const handleDeleteBackup = async () => {
+    if (!backupToDelete) return;
+    setDeletingBackup(true);
+    setMsg(null);
+    try {
+      const res = await fetch(`/api/backup?filename=${encodeURIComponent(backupToDelete.filename)}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setMsg({ type: "success", text: data.message || "Copia eliminada." });
+      setBackupToDelete(null);
+      await loadBackups();
+    } catch (err: any) {
+      setMsg({ type: "error", text: err.message || "Error al eliminar copia." });
+    } finally {
+      setDeletingBackup(false);
+    }
+  };
+
+  const handleExecuteRestore = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (restoreConfirmationCode.trim() !== "RESTAURAR-COPIA-2026") {
+      setMsg({ type: "error", text: "Código de confirmación incorrecto. Debe escribir 'RESTAURAR-COPIA-2026'." });
+      return;
+    }
+
+    setRestoringBackup(true);
+    setMsg(null);
+    try {
+      let res;
+      if (restoreFile) {
+        const formData = new FormData();
+        formData.append("file", restoreFile);
+        formData.append("confirmationCode", restoreConfirmationCode);
+        res = await fetch("/api/backup/restore", {
+          method: "POST",
+          body: formData,
+        });
+      } else if (backupToRestore) {
+        res = await fetch("/api/backup/restore", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            filename: backupToRestore.filename,
+            confirmationCode: restoreConfirmationCode,
+          }),
+        });
+      } else {
+        throw new Error("No se ha seleccionado ninguna copia para restaurar.");
+      }
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setMsg({ type: "success", text: `¡${data.message}!` });
+      setIsRestoreModalOpen(false);
+      setBackupToRestore(null);
+      setRestoreFile(null);
+      setRestoreConfirmationCode("");
+      await loadBackups();
+      await loadSettings();
+      if (onRefreshGlobal) onRefreshGlobal();
+    } catch (err: any) {
+      setMsg({ type: "error", text: err.message || "Error al restaurar copia de seguridad." });
+    } finally {
+      setRestoringBackup(false);
+    }
+  };
+
   const loadCompanies = async () => {
     try {
       const res = await fetch("/api/companies");
@@ -199,6 +350,7 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
   useEffect(() => {
     loadSettings();
     loadCompanies();
+    loadBackups();
     if (isSuper) {
       loadUsers();
     }
@@ -592,24 +744,26 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
         </div>
       )}
 
-      {/* Selector de Pestañas (Solo visible si es SUPERADMIN) */}
-      {isSuper && (
+      {/* Selector de Pestañas (Visible si es SUPERADMIN o ADMIN) */}
+      {(isSuper || user?.role === "ADMIN") && (
         <div className="flex flex-wrap items-center gap-1.5 p-1 bg-white/[0.03] rounded-xl border border-white/[0.08]">
-          <button
-            type="button"
-            onClick={() => setActiveTab("EMPRESAS")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
-              activeTab === "EMPRESAS"
-                ? "bg-[#5AA9E6] text-black shadow-sm"
-                : "text-[#94A3B8] hover:text-white"
-            }`}
-          >
-            <Building2 className="w-3.5 h-3.5" />
-            <span>Gestión de Empresas & Negocios</span>
-            <Badge variant="primary" className="text-[10px] py-0 px-1.5">
-              {companiesList.length}
-            </Badge>
-          </button>
+          {isSuper && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("EMPRESAS")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
+                activeTab === "EMPRESAS"
+                  ? "bg-[#5AA9E6] text-black shadow-sm"
+                  : "text-[#94A3B8] hover:text-white"
+              }`}
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              <span>Gestión de Empresas & Negocios</span>
+              <Badge variant="primary" className="text-[10px] py-0 px-1.5">
+                {companiesList.length}
+              </Badge>
+            </button>
+          )}
 
           <button
             type="button"
@@ -624,47 +778,69 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
             <span>Datos del Negocio & Ticket</span>
           </button>
 
+          {isSuper && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("USUARIOS")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
+                activeTab === "USUARIOS"
+                  ? "bg-[#5AA9E6] text-black shadow-sm"
+                  : "text-[#94A3B8] hover:text-white"
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>Gestión de Usuarios & Contraseñas</span>
+              <Badge variant="primary" className="text-[10px] py-0 px-1.5">
+                {usersList.length}
+              </Badge>
+            </button>
+          )}
+
+          {isSuper && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("PERMISOS")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
+                activeTab === "PERMISOS"
+                  ? "bg-[#5AA9E6] text-black shadow-sm"
+                  : "text-[#94A3B8] hover:text-white"
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Control de Módulos & Permisos por Rol</span>
+            </button>
+          )}
+
           <button
             type="button"
-            onClick={() => setActiveTab("USUARIOS")}
+            onClick={() => setActiveTab("BACKUPS")}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
-              activeTab === "USUARIOS"
-                ? "bg-[#5AA9E6] text-black shadow-sm"
+              activeTab === "BACKUPS"
+                ? "bg-[#5AA9E6] text-black shadow-sm font-bold"
                 : "text-[#94A3B8] hover:text-white"
             }`}
           >
-            <Users className="w-3.5 h-3.5" />
-            <span>Gestión de Usuarios & Contraseñas</span>
-            <Badge variant="primary" className="text-[10px] py-0 px-1.5">
-              {usersList.length}
+            <Database className="w-3.5 h-3.5" />
+            <span>Copias de Seguridad (Backups Cifrados)</span>
+            <Badge variant="neutral" className="text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+              AES-256
             </Badge>
           </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab("PERMISOS")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
-              activeTab === "PERMISOS"
-                ? "bg-[#5AA9E6] text-black shadow-sm"
-                : "text-[#94A3B8] hover:text-white"
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Control de Módulos & Permisos por Rol</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab("LIMPIEZA")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
-              activeTab === "LIMPIEZA"
-                ? "bg-[#F87171] text-white shadow-sm"
-                : "text-[#F87171]/80 hover:text-[#F87171] hover:bg-[#F87171]/10"
-            }`}
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>Limpieza de Pruebas & Restablecimiento</span>
-          </button>
+          {isSuper && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("LIMPIEZA")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
+                activeTab === "LIMPIEZA"
+                  ? "bg-[#F87171] text-white shadow-sm"
+                  : "text-[#F87171]/80 hover:text-[#F87171] hover:bg-[#F87171]/10"
+              }`}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Limpieza de Pruebas & Restablecimiento</span>
+            </button>
+          )}
         </div>
       )}
 
@@ -1376,6 +1552,444 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
                   {loading ? "Guardando..." : "Guardar Todos los Cambios"}
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* PESTAÑA: COPIAS DE SEGURIDAD (BACKUPS CIFRADOS) */}
+      {activeTab === "BACKUPS" && (
+        <div className="space-y-4">
+          {/* Tarjeta de Encabezado / Estado de Seguridad */}
+          <Card className="border-[#5AA9E6]/30 bg-gradient-to-r from-[#1F3A5F]/40 to-[#222831]">
+            <CardHeader className="pb-3 border-b border-white/[0.08]">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#5AA9E6]/20 border border-[#5AA9E6]/40 flex items-center justify-center text-[#5AA9E6]">
+                    <Database className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <CardTitle className="text-base text-white">Copias de Seguridad (Backups Cifrados)</CardTitle>
+                      <Badge variant="neutral" className="text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                        🔒 AES-256-GCM Activo
+                      </Badge>
+                    </div>
+                    <CardDescription className="text-xs text-[#94A3B8]">
+                      Cifrado de grado militar con firma de autenticidad. Solo este software puede descifrar y restaurar los datos.
+                    </CardDescription>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    onClick={handleCreateBackupNow}
+                    disabled={creatingBackup}
+                    className="cursor-pointer font-bold shadow-lg shadow-[#5AA9E6]/20"
+                  >
+                    <Download className="w-4 h-4 mr-1.5" />
+                    {creatingBackup ? "Generando y Cifrando..." : "⚡ Generar y Descargar Copia Ahora"}
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="pt-3 pb-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                  <span className="text-[#94A3B8] block text-[11px]">Estado Copias Automáticas</span>
+                  <span className="font-bold flex items-center gap-1.5 mt-0.5">
+                    {backupConfig.enabled ? (
+                      <span className="text-emerald-400 flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        Activadas (En Segundo Plano)
+                      </span>
+                    ) : (
+                      <span className="text-amber-400">Pausadas</span>
+                    )}
+                  </span>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                  <span className="text-[#94A3B8] block text-[11px]">Última Copia Realizada</span>
+                  <span className="font-mono text-white block mt-0.5">
+                    {backupConfig.lastBackupAt
+                      ? new Date(backupConfig.lastBackupAt).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "medium" })
+                      : "Sin copias previas"}
+                  </span>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                  <span className="text-[#94A3B8] block text-[11px]">Próxima Copia Programada</span>
+                  <span className="font-mono text-[#5AA9E6] block mt-0.5">
+                    {backupConfig.enabled && backupConfig.nextBackupAt
+                      ? new Date(backupConfig.nextBackupAt).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "medium" })
+                      : "Pausada"}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Configuración de Frecuencia Recomendada & Automatización */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card className="border-white/[0.08]">
+              <CardHeader className="pb-3 border-b border-white/[0.08]">
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-[#5AA9E6]" />
+                  Frecuencia de Copia Recomendada
+                </CardTitle>
+                <CardDescription className="text-xs text-[#94A3B8]">
+                  Configura con qué frecuencia el sistema generará copias de respaldo automáticas.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-4 space-y-4">
+                <form onSubmit={handleSaveBackupConfig} className="space-y-4">
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+                    <div>
+                      <span className="text-xs font-semibold text-white block">
+                        Copia Automática en Segundo Plano
+                      </span>
+                      <span className="text-[11px] text-[#94A3B8]">
+                        El servidor generará el backup sin interrumpir la atención a clientes
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setBackupConfig((prev: any) => ({ ...prev, enabled: !prev.enabled }))}
+                      className="cursor-pointer"
+                    >
+                      {backupConfig.enabled ? (
+                        <ToggleRight className="w-8 h-8 text-[#5AA9E6]" />
+                      ) : (
+                        <ToggleLeft className="w-8 h-8 text-[#94A3B8]" />
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-white block">
+                      Intervalo de Tiempo Recomendado:
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {[
+                        {
+                          hours: 24,
+                          label: "Cada 24 Horas (Diario)",
+                          badge: "⭐ RECOMENDADO",
+                          desc: "Ideal para la mayoría de talleres y tiendas",
+                        },
+                        {
+                          hours: 12,
+                          label: "Cada 12 Horas",
+                          badge: "Alto Flujo",
+                          desc: "Para negocios con alta rotación diaria",
+                        },
+                        {
+                          hours: 6,
+                          label: "Cada 6 Horas",
+                          badge: "Intensivo",
+                          desc: "Protección continua ante imprevistos",
+                        },
+                        {
+                          hours: 168,
+                          label: "Cada 7 Días (Semanal)",
+                          badge: "Semanal",
+                          desc: "Para bajo volumen de operaciones",
+                        },
+                      ].map((item) => (
+                        <div
+                          key={item.hours}
+                          onClick={() => setBackupConfig((prev: any) => ({ ...prev, intervalHours: item.hours }))}
+                          className={`p-2.5 rounded-xl border cursor-pointer transition-all ${
+                            backupConfig.intervalHours === item.hours
+                              ? "bg-[#5AA9E6]/15 border-[#5AA9E6] text-white"
+                              : "bg-white/[0.02] border-white/[0.06] hover:border-white/[0.15] text-[#94A3B8]"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-bold text-white">{item.label}</span>
+                            <Badge
+                              variant="neutral"
+                              className={`text-[9px] px-1 py-0 ${
+                                item.hours === 24
+                                  ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                                  : "bg-white/5 text-[#94A3B8] border-white/10"
+                              }`}
+                            >
+                              {item.badge}
+                            </Badge>
+                          </div>
+                          <span className="text-[10px] text-[#94A3B8] block">{item.desc}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-[#94A3B8] block">
+                      Retención de Copias Locales en Servidor
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min="3"
+                        max="30"
+                        value={backupConfig.maxBackupsToKeep || 7}
+                        onChange={(e) =>
+                          setBackupConfig((prev: any) => ({
+                            ...prev,
+                            maxBackupsToKeep: Number(e.target.value) || 7,
+                          }))
+                        }
+                        className="h-8 text-xs w-28"
+                      />
+                      <span className="text-xs text-[#94A3B8]">
+                        copias más recientes (elimina las anteriores para no saturar disco)
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex justify-end">
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      size="sm"
+                      disabled={savingBackupConfig}
+                      className="cursor-pointer"
+                    >
+                      <Save className="w-3.5 h-3.5 mr-1" />
+                      {savingBackupConfig ? "Guardando..." : "Guardar Preferencias de Copia"}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+
+            {/* Restauración de Copias Cifradas (.motobackup) */}
+            <Card className="border-white/[0.08]">
+              <CardHeader className="pb-3 border-b border-white/[0.08]">
+                <CardTitle className="text-sm font-bold flex items-center gap-2 text-white">
+                  <Upload className="w-4 h-4 text-[#5AA9E6]" />
+                  Restaurar Copia desde Archivo Externo
+                </CardTitle>
+                <CardDescription className="text-xs text-[#94A3B8]">
+                  Carga un archivo <b>.motobackup</b> cifrado generado previamente para recuperar toda la información.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-4 space-y-4">
+                <div className="p-4 rounded-xl border border-dashed border-[#5AA9E6]/40 bg-[#5AA9E6]/5 text-center space-y-2">
+                  <HardDrive className="w-8 h-8 text-[#5AA9E6] mx-auto opacity-80" />
+                  <div>
+                    <p className="text-xs font-bold text-white">
+                      {restoreFile ? restoreFile.name : "Selecciona un archivo cifrado .motobackup"}
+                    </p>
+                    <p className="text-[11px] text-[#94A3B8]">
+                      {restoreFile
+                        ? `${(restoreFile.size / 1024).toFixed(1)} KB - Listo para verificar`
+                        : "Solo archivos con cifrado oficial de MotoTaller TS7"}
+                    </p>
+                  </div>
+
+                  <div className="pt-2 flex justify-center gap-2">
+                    <label className="cursor-pointer inline-flex items-center justify-center rounded-lg text-xs font-semibold px-3 py-1.5 bg-white/[0.06] hover:bg-white/[0.1] text-white border border-white/[0.15] transition-colors">
+                      <FileArchive className="w-3.5 h-3.5 mr-1.5 text-[#5AA9E6]" />
+                      Examinar Archivo...
+                      <input
+                        type="file"
+                        accept=".motobackup"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) setRestoreFile(f);
+                        }}
+                        className="hidden"
+                      />
+                    </label>
+
+                    {restoreFile && (
+                      <Button
+                        type="button"
+                        variant="primary"
+                        size="sm"
+                        onClick={() => {
+                          setBackupToRestore(null);
+                          setIsRestoreModalOpen(true);
+                        }}
+                        className="cursor-pointer bg-amber-500 hover:bg-amber-600 text-black font-bold"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5 mr-1" />
+                        Proceder a Restaurar
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-1 text-xs">
+                  <span className="font-semibold text-white flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5 text-emerald-400" />
+                    Garantía de Integridad & Cifrado:
+                  </span>
+                  <p className="text-[11px] text-[#94A3B8] leading-relaxed">
+                    Si un archivo de backup fue alterado o proviene de otro sistema, la verificación matemática <b>AES-256-GCM</b> lo detectará y rechazará automáticamente la restauración para evitar corrupción de datos.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Historial de Copias Almacenadas en el Servidor */}
+          <Card className="border-white/[0.08]">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-white/[0.08] gap-2">
+              <div>
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <Database className="w-4 h-4 text-[#5AA9E6]" />
+                  Copias de Seguridad Disponibles en el Servidor ({storedBackups.length})
+                </CardTitle>
+                <CardDescription className="text-xs text-[#94A3B8]">
+                  Archivos encriptados guardados localmente listos para descargar o restaurar en 1 clic
+                </CardDescription>
+              </div>
+
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={loadBackups}
+                disabled={loadingBackups}
+                className="cursor-pointer text-xs h-7.5"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loadingBackups ? "animate-spin" : ""}`} />
+                Actualizar Lista
+              </Button>
+            </CardHeader>
+
+            <CardContent className="pt-3">
+              {storedBackups.length === 0 ? (
+                <div className="py-8 text-center space-y-2">
+                  <Database className="w-8 h-8 text-[#94A3B8] mx-auto opacity-50" />
+                  <p className="text-xs text-[#94A3B8]">No hay copias de seguridad generadas aún.</p>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    onClick={handleCreateBackupNow}
+                    disabled={creatingBackup}
+                    className="cursor-pointer text-xs"
+                  >
+                    Crear la Primera Copia Ahora
+                  </Button>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="text-[11px] uppercase text-[#94A3B8] border-b border-white/[0.08]">
+                      <tr>
+                        <th className="pb-2.5 font-semibold">Tipo / Archivo</th>
+                        <th className="pb-2.5 font-semibold">Fecha y Hora</th>
+                        <th className="pb-2.5 font-semibold">Tamaño Cifrado</th>
+                        <th className="pb-2.5 font-semibold">Contenido Incluido</th>
+                        <th className="pb-2.5 font-semibold">Seguridad</th>
+                        <th className="pb-2.5 font-semibold text-right">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/[0.06]">
+                      {storedBackups.map((b) => (
+                        <tr key={b.filename} className="hover:bg-white/[0.02]">
+                          <td className="py-2.5 pr-2 font-mono">
+                            <div className="flex items-center gap-1.5">
+                              <Badge
+                                variant="neutral"
+                                className={`text-[10px] py-0 px-1.5 ${
+                                  b.isAuto
+                                    ? "bg-purple-500/20 text-purple-300 border-purple-500/30"
+                                    : "bg-blue-500/20 text-blue-300 border-blue-500/30"
+                                }`}
+                              >
+                                {b.isAuto ? "🤖 Automático" : "👤 Manual"}
+                              </Badge>
+                              <span className="text-white truncate max-w-[220px]" title={b.filename}>
+                                {b.filename}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-2.5 pr-2 text-[#94A3B8] whitespace-nowrap">
+                            {new Date(b.createdAt).toLocaleString("es-CO", {
+                              dateStyle: "short",
+                              timeStyle: "medium",
+                            })}
+                          </td>
+                          <td className="py-2.5 pr-2 font-mono text-[#5AA9E6] whitespace-nowrap">
+                            {b.sizeFormatted}
+                          </td>
+                          <td className="py-2.5 pr-2 text-[#94A3B8] whitespace-nowrap">
+                            {b.stats ? (
+                              <span className="text-[11px]">
+                                <b className="text-white">{b.stats.productsCount}</b> repuestos •{" "}
+                                <b className="text-white">{b.stats.invoicesCount}</b> ventas •{" "}
+                                <b className="text-white">{b.stats.customersCount}</b> clientes
+                              </span>
+                            ) : (
+                              <span className="text-[11px] text-[#94A3B8]">Base de datos completa</span>
+                            )}
+                          </td>
+                          <td className="py-2.5 pr-2 whitespace-nowrap">
+                            <Badge variant="neutral" className="text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                              🔒 AES-256-GCM
+                            </Badge>
+                          </td>
+                          <td className="py-2.5 text-right whitespace-nowrap">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                onClick={() =>
+                                  window.open(`/api/backup/download?filename=${encodeURIComponent(b.filename)}`, "_blank")
+                                }
+                                title="Descargar archivo a tu dispositivo"
+                                className="h-7 text-[11px] px-2 cursor-pointer font-semibold"
+                              >
+                                <Download className="w-3 h-3 mr-1 text-[#5AA9E6]" />
+                                Descargar
+                              </Button>
+
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => {
+                                  setBackupToRestore(b);
+                                  setRestoreFile(null);
+                                  setIsRestoreModalOpen(true);
+                                }}
+                                title="Restaurar el sistema a este punto"
+                                className="h-7 text-[11px] px-2 cursor-pointer bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30"
+                              >
+                                <RefreshCw className="w-3 h-3 mr-1" />
+                                Restaurar
+                              </Button>
+
+                              <Button
+                                type="button"
+                                variant="danger"
+                                size="sm"
+                                onClick={() => setBackupToDelete(b)}
+                                title="Eliminar copia del servidor"
+                                className="h-7 text-[11px] px-2 cursor-pointer bg-[#F87171]/15 hover:bg-[#F87171]/25 text-[#F87171] border border-[#F87171]/30"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -2261,6 +2875,121 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
                 {companyActionLoading ? "Eliminando..." : "Eliminar Empresa"}
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirmar Eliminación de Copia de Seguridad */}
+      {backupToDelete && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#222831] border border-[#F87171]/40 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-[#F87171]">
+              <div className="w-10 h-10 rounded-xl bg-[#F87171]/15 border border-[#F87171]/30 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-[#F87171]" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-white">Eliminar Copia</h4>
+                <p className="text-xs text-[#94A3B8]">Esta acción liberará espacio en disco</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-[#EAF4F4] leading-relaxed">
+              ¿Estás seguro de que deseas eliminar permanentemente la copia{" "}
+              <strong className="text-white font-mono">{backupToDelete.filename}</strong>?
+            </p>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-white/[0.08]">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setBackupToDelete(null)}
+                disabled={deletingBackup}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                onClick={handleDeleteBackup}
+                disabled={deletingBackup}
+                className="bg-[#F87171] hover:bg-[#EF4444] text-white"
+              >
+                {deletingBackup ? "Eliminando..." : "Eliminar Copia"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirmación de Restauración de Copia Cifrada */}
+      {isRestoreModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#222831] border border-amber-500/50 rounded-2xl p-5 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-amber-400">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-amber-400" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-white">Confirmar Restauración del Sistema</h4>
+                <p className="text-xs text-amber-300">Descifrado y Recuperación de Datos</p>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs text-[#EAF4F4] space-y-1.5 leading-relaxed">
+              <p className="font-semibold text-amber-300 flex items-center gap-1.5">
+                <span>⚠️ Advertencia de Sobrescritura:</span>
+              </p>
+              <p>
+                Al restaurar esta copia, la base de datos actual (inventario, facturas, clientes y configuraciones) será reemplazada por el estado guardado en este backup cifrado:
+              </p>
+              <div className="font-mono text-[11px] bg-black/40 p-2 rounded-lg text-[#5AA9E6] break-all">
+                {restoreFile ? `📁 Archivo Externo: ${restoreFile.name}` : `💾 Copia del Servidor: ${backupToRestore?.filename}`}
+              </div>
+            </div>
+
+            <form onSubmit={handleExecuteRestore} className="space-y-3">
+              <div className="space-y-1.5">
+                <label className="text-xs text-[#94A3B8] block">
+                  Para confirmar, escribe exactamente <b className="text-white font-mono">RESTAURAR-COPIA-2026</b>:
+                </label>
+                <Input
+                  type="text"
+                  placeholder="RESTAURAR-COPIA-2026"
+                  value={restoreConfirmationCode}
+                  onChange={(e) => setRestoreConfirmationCode(e.target.value)}
+                  className="font-mono text-center tracking-wider text-xs border-amber-500/40 focus:border-amber-400"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-white/[0.08]">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setIsRestoreModalOpen(false);
+                    setBackupToRestore(null);
+                    setRestoreFile(null);
+                    setRestoreConfirmationCode("");
+                  }}
+                  disabled={restoringBackup}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  disabled={restoreConfirmationCode.trim() !== "RESTAURAR-COPIA-2026" || restoringBackup}
+                  className="bg-amber-500 hover:bg-amber-600 text-black font-bold disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 mr-1 ${restoringBackup ? "animate-spin" : ""}`} />
+                  {restoringBackup ? "Descifrando y Restaurando..." : "Confirmar y Restaurar"}
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       )}

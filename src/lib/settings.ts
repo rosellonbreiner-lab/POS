@@ -16,6 +16,22 @@ export interface Company {
   createdAt?: string;
 }
 
+export interface BackupSettings {
+  enabled: boolean;
+  intervalHours: number; // 24 = Diario (Recomendado)
+  maxBackupsToKeep: number;
+  lastBackupAt: string | null;
+  nextBackupAt: string | null;
+}
+
+export const defaultBackupSettings: BackupSettings = {
+  enabled: true,
+  intervalHours: 24, // Recomendado: cada 24 horas
+  maxBackupsToKeep: 7,
+  lastBackupAt: null,
+  nextBackupAt: null,
+};
+
 export const defaultCompanies: Company[] = [
   {
     id: "comp-mototaller",
@@ -96,6 +112,7 @@ export const defaultSettings = {
       escanerCamara: true,
     },
   },
+  backupSettings: defaultBackupSettings,
 };
 
 export function getSettings() {
@@ -138,6 +155,10 @@ export function getSettings() {
             ...defaultSettings.roleFeaturePermissions.TRABAJADOR,
             ...(parsed.roleFeaturePermissions?.TRABAJADOR || {}),
           },
+        },
+        backupSettings: {
+          ...defaultBackupSettings,
+          ...(parsed.backupSettings || {}),
         },
       };
     }
