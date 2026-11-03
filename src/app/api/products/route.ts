@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getSettings, saveSettings } from "@/lib/settings";
 
 export async function GET(request: Request) {
   const user = await getCurrentUser();
@@ -42,7 +43,15 @@ export async function GET(request: Request) {
     orderBy: { createdAt: "desc" },
   });
 
-  return NextResponse.json({ products });
+  const settings = getSettings();
+  const productCompanies = settings.productCompanies || {};
+
+  const productsWithCompany = products.map((p) => ({
+    ...p,
+    companyId: productCompanies[p.id] || "comp-mototaller",
+  }));
+
+  return NextResponse.json({ products: productsWithCompany });
 }
 
 export async function POST(request: Request) {
@@ -146,7 +155,15 @@ export async function POST(request: Request) {
       return prod;
     });
 
-    return NextResponse.json({ success: true, product });
+    const settings = getSettings();
+    const targetComp = body.companyId || (user.role !== "SUPERADMIN" ? settings.userCompanies?.[user.email.toLowerCase()] : "comp-mototaller") || "comp-mototaller";
+    const productCompanies = {
+      ...(settings.productCompanies || {}),
+      [product.id]: targetComp,
+    };
+    saveSettings({ ...settings, productCompanies });
+
+    return NextResponse.json({ success: true, product: { ...product, companyId: targetComp } });
   } catch (error: any) {
     console.error("Error creating product:", error);
     return NextResponse.json(

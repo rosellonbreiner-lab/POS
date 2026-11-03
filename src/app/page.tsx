@@ -1261,12 +1261,17 @@ export default function DashboardPage() {
                   onChange={(e) => setSelectedCompanyId(e.target.value)}
                   className="bg-transparent text-xs text-[#EAF4F4] font-bold focus:outline-none cursor-pointer pr-1"
                 >
-                  <option value="ALL" className="bg-[#222831] text-white">🏢 Todas las Empresas</option>
-                  {availableCompanies.map((c) => (
-                    <option key={c.id} value={c.id} className="bg-[#222831] text-white">
-                      {c.type === "TALLER_MOTOS" ? "🏍️ " : "🏪 "} {c.name}
-                    </option>
-                  ))}
+                  <option value="ALL" className="bg-[#222831] text-white">
+                    🏢 Todas las Empresas ({products.length} artículos)
+                  </option>
+                  {availableCompanies.map((c) => {
+                    const count = products.filter((p) => (p.companyId || "comp-mototaller") === c.id).length;
+                    return (
+                      <option key={c.id} value={c.id} className="bg-[#222831] text-white">
+                        {c.type === "TALLER_MOTOS" ? "🏍️ " : "🏪 "} {c.name} ({count} {c.type === "TALLER_MOTOS" ? "repuestos" : "artículos"})
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
             ) : (
@@ -1490,14 +1495,36 @@ export default function DashboardPage() {
                   </span>
                 </div>
 
-                {products.length === 0 ? (
+                {filteredProducts.length === 0 ? (
                   <div className="py-12 text-center space-y-3">
                     <Package className="w-10 h-10 text-[#9CA3AF] mx-auto opacity-50" />
-                    <p className="text-sm text-[#9CA3AF]">No tienes repuestos agregados todavía.</p>
-                    <Button variant="primary" size="sm" onClick={() => setIsProductModalOpen(true)}>
-                      <Plus className="w-4 h-4 mr-1" />
-                      Registrar Primer Repuesto
-                    </Button>
+                    <p className="text-sm font-semibold text-white">
+                      Esta empresa ({activeCompany.name}) no tiene artículos en su inventario.
+                    </p>
+                    <p className="text-xs text-[#9CA3AF] max-w-md mx-auto">
+                      Los <b>{products.length} repuestos</b> de motocicletas están guardados en <b>MotoTaller TS7</b>. Puedes cambiar al taller en la barra superior o hacer clic aquí abajo:
+                    </p>
+                    <div className="flex justify-center gap-2 pt-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setSelectedCompanyId("comp-mototaller")}
+                        className="cursor-pointer font-semibold text-[#5AA9E6]"
+                      >
+                        🏍️ Ver Inventario del Taller ({products.length} repuestos)
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="primary"
+                        size="sm"
+                        onClick={() => setIsProductModalOpen(true)}
+                        className="cursor-pointer"
+                      >
+                        <Plus className="w-4 h-4 mr-1" />
+                        Agregar Producto a {activeCompany.name}
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
