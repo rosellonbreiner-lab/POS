@@ -230,6 +230,33 @@ export default function DashboardPage() {
 
   const isWorkshop = selectedCompanyId === "ALL" || activeCompany.type === "TALLER_MOTOS";
 
+  // Aislamiento Multi-Empresa: Filtrado de datos por empresa activa
+  const filteredInvoices = useMemo(() => {
+    if (selectedCompanyId === "ALL") return invoices;
+    return invoices.filter((i) => (i.companyId || "comp-mototaller") === selectedCompanyId);
+  }, [invoices, selectedCompanyId]);
+
+  const companyProducts = useMemo(() => {
+    if (selectedCompanyId === "ALL") return products;
+    return products.filter((p) => (p.companyId || "comp-mototaller") === selectedCompanyId);
+  }, [products, selectedCompanyId]);
+
+  const filteredOrders = useMemo(() => {
+    if (!isWorkshop) return [];
+    if (selectedCompanyId === "ALL") return workOrders;
+    return workOrders.filter((o) => (o.companyId || "comp-mototaller") === selectedCompanyId);
+  }, [workOrders, selectedCompanyId, isWorkshop]);
+
+  const filteredQuotes = useMemo(() => {
+    if (selectedCompanyId === "ALL") return quotes;
+    return quotes.filter((q) => (q.companyId || "comp-mototaller") === selectedCompanyId);
+  }, [quotes, selectedCompanyId]);
+
+  const filteredCredits = useMemo(() => {
+    if (selectedCompanyId === "ALL") return credits;
+    return credits.filter((c) => (c.companyId || "comp-mototaller") === selectedCompanyId);
+  }, [credits, selectedCompanyId]);
+
   useEffect(() => {
     if (user) {
       loadAllData();
@@ -426,19 +453,21 @@ export default function DashboardPage() {
     }
   };
 
-  const filteredProducts = products.filter((prod) => {
-    if (motorcycleFilter === "TODAS") return true;
-    const fit = (prod.motorcycleFit || "").toLowerCase();
-    if (motorcycleFilter === "BOXER") return fit.includes("boxer");
-    if (motorcycleFilter === "NKD") return fit.includes("nkd");
-    if (motorcycleFilter === "ECO") return fit.includes("eco") || fit.includes("splendor");
-    if (motorcycleFilter === "FZ") return fit.includes("fz");
-    if (motorcycleFilter === "CRYPTON") return fit.includes("crypton");
-    if (motorcycleFilter === "PULSAR") return fit.includes("pulsar");
-    if (motorcycleFilter === "SUZUKI") return fit.includes("suzuki") || fit.includes("ax") || fit.includes("gixxer");
-    if (motorcycleFilter === "UNIVERSAL") return fit.includes("universal");
-    return true;
-  });
+  const filteredProducts = useMemo(() => {
+    return companyProducts.filter((prod) => {
+      if (motorcycleFilter === "TODAS") return true;
+      const fit = (prod.motorcycleFit || "").toLowerCase();
+      if (motorcycleFilter === "BOXER") return fit.includes("boxer");
+      if (motorcycleFilter === "NKD") return fit.includes("nkd");
+      if (motorcycleFilter === "ECO") return fit.includes("eco") || fit.includes("splendor");
+      if (motorcycleFilter === "FZ") return fit.includes("fz");
+      if (motorcycleFilter === "CRYPTON") return fit.includes("crypton");
+      if (motorcycleFilter === "PULSAR") return fit.includes("pulsar");
+      if (motorcycleFilter === "SUZUKI") return fit.includes("suzuki") || fit.includes("ax") || fit.includes("gixxer");
+      if (motorcycleFilter === "UNIVERSAL") return fit.includes("universal");
+      return true;
+    });
+  }, [companyProducts, motorcycleFilter]);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -454,11 +483,31 @@ export default function DashboardPage() {
 
     const allItems = [
       { label: "Dashboard", icon: BarChart3 },
-      { label: "Inventario & Kardex", icon: Package, badge: `${products.length}` },
-      { label: "Punto de Venta (POS)", icon: ShoppingCart, badge: `${invoices.length}` },
-      { label: "Órdenes de Trabajo", icon: ClipboardList, badge: `${workOrders.filter((o) => o.status !== "ENTREGADA_Y_FACTURADA").length}` },
-      { label: "Cotizaciones", icon: FileText, badge: `${quotes.length}` },
-      { label: "Créditos", icon: CreditCard, badge: `${credits.filter((c) => c.status !== "PAGADO").length}` },
+      { label: "Inventario & Kardex", icon: Package, badge: `${filteredProducts.length}` },
+      {
+        label: "Punto de Venta (POS)",
+        icon: ShoppingCart,
+        badge: filteredInvoices.length > 0 ? `${filteredInvoices.length}` : undefined,
+      },
+      {
+        label: "Órdenes de Trabajo",
+        icon: ClipboardList,
+        badge: filteredOrders.filter((o) => o.status !== "ENTREGADA_Y_FACTURADA").length > 0
+          ? `${filteredOrders.filter((o) => o.status !== "ENTREGADA_Y_FACTURADA").length}`
+          : undefined,
+      },
+      {
+        label: "Cotizaciones",
+        icon: FileText,
+        badge: filteredQuotes.length > 0 ? `${filteredQuotes.length}` : undefined,
+      },
+      {
+        label: "Créditos",
+        icon: CreditCard,
+        badge: filteredCredits.filter((c) => c.status !== "PAGADO").length > 0
+          ? `${filteredCredits.filter((c) => c.status !== "PAGADO").length}`
+          : undefined,
+      },
       { label: "Contabilidad & Caja", icon: DollarSign },
       { label: "Auditoría de Seguridad", icon: ShieldCheck },
       { label: "Configuración", icon: Settings },
@@ -502,7 +551,7 @@ export default function DashboardPage() {
 
       return true;
     });
-  }, [user, products.length, invoices.length, workOrders, quotes.length, credits, workshopConfig, isWorkshop, activeCompany]);
+  }, [user, filteredProducts.length, filteredInvoices.length, filteredOrders, filteredQuotes.length, filteredCredits, workshopConfig, isWorkshop, activeCompany]);
 
   // Cambio seguro de módulo con actualización del path en la URL del navegador
   const navigateToTab = (tabName: string) => {
@@ -620,31 +669,33 @@ export default function DashboardPage() {
   const kpis = [
     {
       title: "Ventas de Hoy",
-      value: `$${(dashboardData?.kpis?.todaySales || 0).toLocaleString("es-CO")} COP`,
-      change: `${invoices.length} facturas`,
+      value: `$${filteredInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0).toLocaleString("es-CO")} COP`,
+      change: `${filteredInvoices.length} facturas`,
       isUp: true,
       icon: ShoppingCart,
     },
     {
       title: "Utilidad Estimada",
-      value: `$${(dashboardData?.kpis?.todayProfit || 0).toLocaleString("es-CO")} COP`,
+      value: `$${Math.round(filteredInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0) * 0.35).toLocaleString("es-CO")} COP`,
       change: "margen neto",
       isUp: true,
       icon: TrendingUp,
     },
     {
-      title: "Motos en Taller",
-      value: `${workOrders.filter(o => o.status !== "ENTREGADA_Y_FACTURADA").length} activas`,
-      change: `${workOrders.length} totales`,
+      title: isWorkshop ? "Motos en Taller" : "Artículos en Tienda",
+      value: isWorkshop
+        ? `${filteredOrders.filter((o) => o.status !== "ENTREGADA_Y_FACTURADA").length} activas`
+        : `${filteredProducts.length} productos`,
+      change: isWorkshop ? `${filteredOrders.length} totales` : "en inventario",
       isUp: true,
-      icon: ClipboardList,
+      icon: isWorkshop ? ClipboardList : Package,
     },
     {
-      title: "Cotizaciones",
-      value: `${quotes.length} realizadas`,
-      change: "estimaciones",
+      title: isWorkshop ? "Cotizaciones" : "Ventas Mostrador",
+      value: isWorkshop ? `${filteredQuotes.length} realizadas` : `${filteredInvoices.length} emitidas`,
+      change: isWorkshop ? "estimaciones" : "tickets",
       isUp: true,
-      icon: Calculator,
+      icon: isWorkshop ? Calculator : ShoppingCart,
     },
   ];
 
@@ -670,7 +721,8 @@ export default function DashboardPage() {
 
       <CreateSaleModal
         isOpen={isSaleModalOpen}
-        products={products}
+        products={filteredProducts}
+        companyId={selectedCompanyId !== "ALL" ? selectedCompanyId : (user.companyId || "comp-mototaller")}
         onClose={() => setIsSaleModalOpen(false)}
         onSaleCreated={(createdInvoice) => {
           loadAllData();
@@ -1539,7 +1591,7 @@ export default function DashboardPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                {workOrders.filter((ord) => ord.status !== "ENTREGADA_Y_FACTURADA").length === 0 ? (
+                {filteredOrders.filter((ord) => ord.status !== "ENTREGADA_Y_FACTURADA").length === 0 ? (
                   <div className="py-8 text-center space-y-3">
                     <ClipboardList className="w-10 h-10 text-[#9CA3AF] mx-auto opacity-50" />
                     <p className="text-sm text-[#9CA3AF]">No hay motocicletas con repuestos asignados.</p>
@@ -1550,7 +1602,7 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {workOrders
+                    {filteredOrders
                       .filter((ord) => ord.status !== "ENTREGADA_Y_FACTURADA")
                       .map((ord) => (
                       <div
@@ -1666,7 +1718,7 @@ export default function DashboardPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                {quotes.filter((q) => q.status !== "CONVERTIDA").length === 0 ? (
+                {filteredQuotes.filter((q) => q.status !== "CONVERTIDA").length === 0 ? (
                   <div className="py-8 text-center space-y-3">
                     <FileText className="w-10 h-10 text-[#9CA3AF] mx-auto opacity-50" />
                     <p className="text-sm text-[#9CA3AF]">No tienes cotizaciones registradas.</p>
@@ -1689,7 +1741,7 @@ export default function DashboardPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-white/[0.06]">
-                        {quotes
+                        {filteredQuotes
                           .filter((q) => q.status !== "CONVERTIDA")
                           .map((q) => (
                           <tr key={q.id} className="hover:bg-white/[0.02]">
@@ -1762,7 +1814,7 @@ export default function DashboardPage() {
           {/* 5. MÓDULO PUNTO DE VENTA (POS) */}
           {activeTab === "Punto de Venta (POS)" && (
             <SalesView
-              invoices={invoices}
+              invoices={filteredInvoices}
               onNewSale={() => setIsSaleModalOpen(true)}
               onPrintInvoice={handlePrintInvoiceTicket}
               userRole={user.role}
@@ -1779,9 +1831,9 @@ export default function DashboardPage() {
           {/* 6. MÓDULO CRÉDITOS & CARTERA */}
           {activeTab === "Créditos" && (
             <CreditsView
-              credits={credits}
+              credits={filteredCredits}
               onRefresh={loadAllData}
-              workshopConfig={workshopConfig}
+              workshopConfig={activeCompany || workshopConfig}
               onOpenTicket={(ticket) => setActiveTicketData(ticket)}
               userRole={user.role}
             />
@@ -1790,8 +1842,8 @@ export default function DashboardPage() {
           {/* 7. MÓDULO CONTABILIDAD & CAJA */}
           {activeTab === "Contabilidad & Caja" && (
             <CashAccountingView
-              invoices={invoices}
-              credits={credits}
+              invoices={filteredInvoices}
+              credits={filteredCredits}
               dashboardData={dashboardData}
               onPrintTicket={handlePrintInvoiceTicket}
             />

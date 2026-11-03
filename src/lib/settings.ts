@@ -60,6 +60,10 @@ export const defaultSettings = {
   receiptMessage: "¡Gracias por confiar en nosotros! Garantía de 30 días en repuestos con este ticket.",
   companies: defaultCompanies,
   userCompanies: defaultUserCompanies,
+  invoiceCompanies: {} as Record<string, string>,
+  productCompanies: {} as Record<string, string>,
+  orderCompanies: {} as Record<string, string>,
+  quoteCompanies: {} as Record<string, string>,
   userCredentials: {
     "super@mototaller.co": "SuperAdmin2026!",
     "admin@mototaller.co": "SuperAdmin2026!",
@@ -119,6 +123,10 @@ export function getSettings() {
           ...defaultUserCompanies,
           ...(parsed.userCompanies || {}),
         },
+        invoiceCompanies: { ...(parsed.invoiceCompanies || {}) },
+        productCompanies: { ...(parsed.productCompanies || {}) },
+        orderCompanies: { ...(parsed.orderCompanies || {}) },
+        quoteCompanies: { ...(parsed.quoteCompanies || {}) },
         userCredentials: {
           ...defaultSettings.userCredentials,
           ...(parsed.userCredentials || {}),
@@ -158,3 +166,4 @@ export function saveSettings(settings: any) {
     console.error("Error saving settings file:", e);
   }
 }
+

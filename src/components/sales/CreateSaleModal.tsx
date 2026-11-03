@@ -22,6 +22,7 @@ interface CreateSaleModalProps {
   onClose: () => void;
   onSaleCreated: (createdInvoice?: any) => void;
   products: any[];
+  companyId?: string;
 }
 
 export function CreateSaleModal({
@@ -29,6 +30,7 @@ export function CreateSaleModal({
   onClose,
   onSaleCreated,
   products,
+  companyId,
 }: CreateSaleModalProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
@@ -192,6 +194,7 @@ export function CreateSaleModal({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          companyId: companyId || undefined,
           customerName: customerName || "Consumidor Final",
           customerPhone: customerPhone || undefined,
           plate: plate ? plate.toUpperCase() : undefined,

@@ -150,3 +150,4 @@ export async function DELETE(
     return NextResponse.json({ error: error.message || "Error al eliminar empresa" }, { status: 500 });
   }
 }
+

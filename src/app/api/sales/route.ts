@@ -1,20 +1,51 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getSettings, saveSettings } from "@/lib/settings";
 
-export async function GET() {
+export async function GET(request: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const invoices = await prisma.invoice.findMany({
+  const { searchParams } = new URL(request.url);
+  const filterCompanyId = searchParams.get("companyId");
+
+  const settings = getSettings();
+  const invoiceCompanies = settings.invoiceCompanies || {};
+  const userCompanies = settings.userCompanies || {};
+
+  const rawInvoices = await prisma.invoice.findMany({
     orderBy: { createdAt: "desc" },
     include: {
       customer: true,
+      user: {
+        select: { id: true, name: true, email: true, role: true },
+      },
       items: { include: { product: true } },
     },
   });
 
-  return NextResponse.json({ invoices });
+  const invoices = rawInvoices.map((inv) => {
+    const directComp = invoiceCompanies[inv.id];
+    const creatorEmail = inv.user?.email?.toLowerCase();
+    const creatorComp = creatorEmail ? userCompanies[creatorEmail] : null;
+    const finalCompanyId = directComp || (creatorComp && creatorComp !== "ALL" ? creatorComp : "comp-mototaller");
+
+    return {
+      ...inv,
+      companyId: finalCompanyId,
+    };
+  });
+
+  let result = invoices;
+  if (filterCompanyId && filterCompanyId !== "ALL") {
+    result = invoices.filter((i) => i.companyId === filterCompanyId);
+  } else if (user.role !== "SUPERADMIN") {
+    const userAssigned = userCompanies[user.email.toLowerCase()] || "comp-mototaller";
+    result = invoices.filter((i) => i.companyId === userAssigned);
+  }
+
+  return NextResponse.json({ invoices: result });
 }
 
 export async function POST(request: Request) {
@@ -174,7 +205,21 @@ export async function POST(request: Request) {
       return createdInvoice;
     });
 
-    return NextResponse.json({ success: true, invoice });
+    // Guardar la empresa asignada a esta venta en invoiceCompanies
+    const settings = getSettings();
+    const userComp = settings.userCompanies?.[user.email.toLowerCase()];
+    const targetCompId = body.companyId || (userComp && userComp !== "ALL" ? userComp : "comp-mototaller");
+
+    const invoiceCompanies = {
+      ...(settings.invoiceCompanies || {}),
+      [invoice.id]: targetCompId,
+    };
+    saveSettings({ ...settings, invoiceCompanies });
+
+    return NextResponse.json({
+      success: true,
+      invoice: { ...invoice, companyId: targetCompId },
+    });
   } catch (error: any) {
     console.error("Error creating invoice:", error);
     return NextResponse.json(
