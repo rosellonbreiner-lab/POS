@@ -29,18 +29,6 @@ export const defaultCompanies: Company[] = [
     receiptMessage: "¡Gracias por confiar en nosotros! Garantía de 30 días en repuestos con este ticket.",
     createdAt: "2026-10-28T00:00:00.000Z",
   },
-  {
-    id: "comp-tienda",
-    name: "Minimarket & Tienda La 14",
-    type: "TIENDA_COMERCIO",
-    slogan: "Abarrotes, Bebidas, Víveres y Productos para el Hogar",
-    nit: "800.123.456-7",
-    phone: "(+57) 310 987 6543",
-    address: "Carrera 9 # 12-30, Maicao",
-    logoUrl: "",
-    receiptMessage: "¡Gracias por su compra en Minimarket La 14! Vuelva pronto.",
-    createdAt: "2026-11-03T00:00:00.000Z",
-  },
 ];
 
 export const defaultUserCompanies: Record<string, string> = {

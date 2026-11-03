@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { verifyPassword, createSession } from "@/lib/auth";
 import { createAuditLog } from "@/lib/audit";
 import { checkRateLimit, resetRateLimit } from "@/lib/rateLimit";
+import { getSettings } from "@/lib/settings";
 
 // Hash precalculado con Argon2id (m=19456, t=2) para mitigar ataques de canal lateral / timing attacks
 const DUMMY_ARGON2_HASH =
@@ -161,6 +162,23 @@ export async function POST(request: Request) {
       ipAddress: clientIp,
     });
 
+    // 11. Obtener empresa asignada
+    const settings = getSettings();
+    const companies = settings.companies || [];
+    const userCompanies = settings.userCompanies || {};
+
+    let assignedCompanyId = userCompanies[emailClean];
+    if (!assignedCompanyId) {
+      assignedCompanyId = user.role === "SUPERADMIN" ? "ALL" : (companies[0]?.id || "comp-mototaller");
+    }
+
+    let assignedCompany = null;
+    if (assignedCompanyId === "ALL") {
+      assignedCompany = companies[0] || null;
+    } else {
+      assignedCompany = companies.find((c: any) => c.id === assignedCompanyId) || companies[0] || null;
+    }
+
     return NextResponse.json({
       success: true,
       user: {
@@ -168,6 +186,8 @@ export async function POST(request: Request) {
         email: user.email,
         name: user.name,
         role: user.role,
+        companyId: assignedCompanyId,
+        company: assignedCompany,
       },
     });
   } catch (error) {

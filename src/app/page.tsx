@@ -122,7 +122,7 @@ export default function DashboardPage() {
 
   // Multi-Empresa (Soporte para múltiples microempresas: Talleres de motos, tiendas, minimarkets)
   const [availableCompanies, setAvailableCompanies] = useState<any[]>([]);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string>("ALL");
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>("comp-mototaller");
 
   // 1. Verificar sesión con timeout de protección para móviles
   useEffect(() => {
@@ -136,8 +136,12 @@ export default function DashboardPage() {
       .then((data) => {
         if (isMounted && data?.user) {
           setUser(data.user);
-          if (data.user.role !== "SUPERADMIN" && data.user.companyId) {
+          if (data.user.role !== "SUPERADMIN") {
+            setSelectedCompanyId(data.user.companyId || "comp-mototaller");
+          } else if (data.user.companyId && data.user.companyId !== "ALL") {
             setSelectedCompanyId(data.user.companyId);
+          } else {
+            setSelectedCompanyId("comp-mototaller");
           }
           if (data.companies) {
             setAvailableCompanies(data.companies);
@@ -196,8 +200,8 @@ export default function DashboardPage() {
       if (dataSettings.config) setWorkshopConfig(dataSettings.config);
       if (dataCompanies.companies) {
         setAvailableCompanies(dataCompanies.companies);
-        if (user.role !== "SUPERADMIN" && user.companyId) {
-          setSelectedCompanyId(user.companyId);
+        if (user.role !== "SUPERADMIN") {
+          setSelectedCompanyId(user.companyId || "comp-mototaller");
         }
       }
     } catch (e) {
@@ -206,6 +210,20 @@ export default function DashboardPage() {
       setLoading(false);
     }
   };
+
+  // Validación y reconciliación de empresa seleccionada
+  useEffect(() => {
+    if (availableCompanies.length > 0) {
+      if (user?.role !== "SUPERADMIN") {
+        setSelectedCompanyId(user?.companyId || "comp-mototaller");
+      } else {
+        const exists = selectedCompanyId === "ALL" || availableCompanies.some((c) => c.id === selectedCompanyId);
+        if (!exists) {
+          setSelectedCompanyId(availableCompanies[0]?.id || "comp-mototaller");
+        }
+      }
+    }
+  }, [availableCompanies, user, selectedCompanyId]);
 
   // Empresa activa actual calculada
   const activeCompany = useMemo(() => {
@@ -216,13 +234,13 @@ export default function DashboardPage() {
     if (user?.company) return user.company;
     if (availableCompanies.length > 0) return availableCompanies[0];
     return {
-      id: "comp-default",
+      id: "comp-mototaller",
       name: workshopConfig?.name || "MotoTaller TS7",
       type: "TALLER_MOTOS",
-      slogan: workshopConfig?.slogan || "Repuestos & Taller",
+      slogan: workshopConfig?.slogan || "Especialistas en Reparación y Repuestos Multimarca",
       nit: workshopConfig?.nit || "901.452.889-1",
-      phone: workshopConfig?.phone || "",
-      address: workshopConfig?.address || "",
+      phone: workshopConfig?.phone || "(+57) 300 123 4567",
+      address: workshopConfig?.address || "Calle 16 # 10-45, Maicao, La Guajira",
       receiptMessage: workshopConfig?.receiptMessage || "¡Gracias por su compra!",
       logoUrl: workshopConfig?.logoUrl || "",
     };
@@ -487,7 +505,6 @@ export default function DashboardPage() {
       {
         label: "Punto de Venta (POS)",
         icon: ShoppingCart,
-        badge: filteredInvoices.length > 0 ? `${filteredInvoices.length}` : undefined,
       },
       {
         label: "Órdenes de Trabajo",
@@ -663,7 +680,18 @@ export default function DashboardPage() {
   }
 
   if (!user) {
-    return <LoginForm onLoginSuccess={(u) => setUser(u)} />;
+    return (
+      <LoginForm
+        onLoginSuccess={(u) => {
+          setUser(u);
+          if (u.role !== "SUPERADMIN") {
+            setSelectedCompanyId(u.companyId || "comp-mototaller");
+          } else {
+            setSelectedCompanyId(u.companyId || "comp-mototaller");
+          }
+        }}
+      />
+    );
   }
 
   const kpis = [

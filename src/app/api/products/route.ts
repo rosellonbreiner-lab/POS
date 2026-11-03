@@ -10,29 +10,19 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const q = searchParams.get("q") || "";
+  const q = (searchParams.get("q") || "").trim();
 
   const products = await prisma.product.findMany({
-    where: {
-      AND: [
-        {
-          NOT: [
-            { description: { contains: "[DESCONTINUADO]" } },
-            { motorcycleFit: { contains: "[DESCONTINUADO]" } },
+    where: q
+      ? {
+          OR: [
+            { name: { contains: q } },
+            { sku: { contains: q } },
+            { barcode: { contains: q } },
+            { motorcycleFit: { contains: q } },
           ],
-        },
-        q
-          ? {
-              OR: [
-                { name: { contains: q } },
-                { sku: { contains: q } },
-                { barcode: { contains: q } },
-                { motorcycleFit: { contains: q } },
-              ],
-            }
-          : {},
-      ],
-    },
+        }
+      : {},
     include: {
       locations: {
         include: { location: true },
@@ -46,7 +36,14 @@ export async function GET(request: Request) {
   const settings = getSettings();
   const productCompanies = settings.productCompanies || {};
 
-  const productsWithCompany = products.map((p) => ({
+  // Filtrar descontinuados sin afectar campos nulos (mitigando lógica de 3 valores en SQLite)
+  const activeProducts = products.filter((p) => {
+    const isDiscDesc = p.description ? p.description.includes("[DESCONTINUADO]") : false;
+    const isDiscFit = p.motorcycleFit ? p.motorcycleFit.includes("[DESCONTINUADO]") : false;
+    return !isDiscDesc && !isDiscFit;
+  });
+
+  const productsWithCompany = activeProducts.map((p) => ({
     ...p,
     companyId: productCompanies[p.id] || "comp-mototaller",
   }));
