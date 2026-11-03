@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getSettings, saveSettings } from "@/lib/settings";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -20,7 +21,15 @@ export async function GET() {
     },
   });
 
-  return NextResponse.json({ quotes });
+  const settings = getSettings();
+  const quoteCompanies = settings.quoteCompanies || {};
+
+  const quotesWithCompany = quotes.map((q) => ({
+    ...q,
+    companyId: quoteCompanies[q.id] || "comp-mototaller",
+  }));
+
+  return NextResponse.json({ quotes: quotesWithCompany });
 }
 
 export async function POST(request: Request) {
@@ -101,7 +110,15 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json({ success: true, quote });
+    const settings = getSettings();
+    const targetComp = body.companyId || (user.role !== "SUPERADMIN" ? settings.userCompanies?.[user.email.toLowerCase()] : "comp-mototaller") || "comp-mototaller";
+    const quoteCompanies = {
+      ...(settings.quoteCompanies || {}),
+      [quote.id]: targetComp,
+    };
+    saveSettings({ ...settings, quoteCompanies });
+
+    return NextResponse.json({ success: true, quote: { ...quote, companyId: targetComp } });
   } catch (error: any) {
     console.error("Error creating quote:", error);
     return NextResponse.json(

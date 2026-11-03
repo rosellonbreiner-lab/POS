@@ -733,6 +733,9 @@ export default function DashboardPage() {
       <CreateProductModal
         isOpen={isProductModalOpen}
         initialBarcode={lastScanned || ""}
+        companyId={selectedCompanyId !== "ALL" ? selectedCompanyId : (user.companyId || "comp-mototaller")}
+        companyName={activeCompany?.name}
+        companyType={activeCompany?.type}
         onClose={() => {
           setIsProductModalOpen(false);
           setLastScanned(null);
@@ -742,7 +745,7 @@ export default function DashboardPage() {
 
       <CreateWorkOrderModal
         isOpen={isOrderModalOpen}
-        products={products}
+        products={companyProducts}
         onClose={() => setIsOrderModalOpen(false)}
         onOrderCreated={loadAllData}
       />
@@ -762,7 +765,7 @@ export default function DashboardPage() {
 
       <CreateQuoteModal
         isOpen={isQuoteModalOpen}
-        products={products}
+        products={companyProducts}
         onClose={() => setIsQuoteModalOpen(false)}
         onQuoteCreated={(createdQuote) => {
           loadAllData();
@@ -1194,7 +1197,7 @@ export default function DashboardPage() {
                 {activeCompany?.name || "MotoTaller"}
               </h1>
               <p className="text-[10px] text-[#9CA3AF] truncate">
-                {activeCompany?.slogan || "Repuestos & Taller"}
+                {activeCompany?.slogan || (isWorkshop ? "Repuestos & Taller" : activeCompany?.type === "FERRETERIA" ? "Ferretería & Construcción" : activeCompany?.type === "TIENDA_COMERCIO" ? "Tienda & Abarrotes" : "Comercio & Ventas")}
               </p>
             </div>
           </div>
@@ -1257,101 +1260,103 @@ export default function DashboardPage() {
 
       {/* Área Principal */}
       <main className="flex-1 flex flex-col min-w-0">
-        {/* Topbar Responsivo (Móvil y PC) */}
-        <header className="h-12 border-b border-white/[0.08] px-4 sm:px-6 flex items-center justify-between glass sticky top-0 z-10 gap-3">
-          {/* Botón Menú Móvil */}
-          <div className="flex items-center gap-2.5">
-            <button
-              type="button"
-              onClick={() => setIsMobileMenuOpen(true)}
-              className="md:hidden text-[#9CA3AF] hover:text-white p-1.5 rounded-lg bg-white/[0.05] border border-white/[0.08] cursor-pointer"
-            >
-              <Menu className="w-4 h-4" />
-            </button>
+        {/* Topbar alineado perfectamente con los recuadros de abajo */}
+        <div className="px-3.5 sm:px-5 pt-3.5 sm:pt-4 sticky top-0 z-20 max-w-[1440px] w-full">
+          <header className="h-12 border border-white/[0.12] rounded-2xl px-4 sm:px-5 flex items-center justify-between glass gap-3 shadow-lg shadow-black/30">
+            {/* Botón Menú Móvil */}
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="md:hidden text-[#9CA3AF] hover:text-white p-1.5 rounded-lg bg-white/[0.05] border border-white/[0.08] cursor-pointer"
+              >
+                <Menu className="w-4 h-4" />
+              </button>
 
-            <div className="flex items-center gap-2 w-44 sm:w-64">
-              <Input
-                icon={<Search className="w-3.5 h-3.5" />}
-                placeholder={isWorkshop ? "Buscar repuesto, placa, SKU..." : "Buscar producto, código, SKU..."}
-                value={quickSearch}
-                onChange={(e) => setQuickSearch(e.target.value)}
-                className="h-7.5 text-xs"
-              />
+              <div className="flex items-center gap-2 w-44 sm:w-64">
+                <Input
+                  icon={<Search className="w-3.5 h-3.5" />}
+                  placeholder={isWorkshop ? "Buscar repuesto, placa, SKU..." : "Buscar producto, código, SKU..."}
+                  value={quickSearch}
+                  onChange={(e) => setQuickSearch(e.target.value)}
+                  className="h-7.5 text-xs"
+                />
+              </div>
+
+              {/* Selector de Empresa Activa (Multi-Tenant) */}
+              {user.role === "SUPERADMIN" ? (
+                <div className="hidden md:flex items-center gap-1.5 px-2 py-1 rounded-xl bg-white/[0.04] border border-[#5AA9E6]/30 hover:border-[#5AA9E6]/60 transition-colors">
+                  <Building2 className="w-3.5 h-3.5 text-[#5AA9E6] shrink-0" />
+                  <span className="text-[10px] text-[#94A3B8] uppercase font-bold tracking-wider hidden lg:inline">Empresa:</span>
+                  <select
+                    value={selectedCompanyId}
+                    onChange={(e) => setSelectedCompanyId(e.target.value)}
+                    className="bg-transparent text-xs text-[#EAF4F4] font-bold focus:outline-none cursor-pointer pr-1"
+                  >
+                    <option value="ALL" className="bg-[#222831] text-white">
+                      🏢 Todas las Empresas ({products.length} artículos)
+                    </option>
+                    {availableCompanies.map((c) => {
+                      const count = products.filter((p) => (p.companyId || "comp-mototaller") === c.id).length;
+                      return (
+                        <option key={c.id} value={c.id} className="bg-[#222831] text-white">
+                          {c.type === "TALLER_MOTOS" ? "🏍️ " : c.type === "FERRETERIA" ? "🔨 " : "🏪 "} {c.name} ({count} {c.type === "TALLER_MOTOS" ? "repuestos" : "artículos"})
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              ) : (
+                <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                  <span className="text-xs">{activeCompany.type === "TALLER_MOTOS" ? "🏍️" : activeCompany.type === "FERRETERIA" ? "🔨" : "🏪"}</span>
+                  <span className="text-xs text-white font-semibold truncate max-w-[160px]">
+                    {activeCompany.name}
+                  </span>
+                </div>
+              )}
             </div>
 
-            {/* Selector de Empresa Activa (Multi-Tenant) */}
-            {user.role === "SUPERADMIN" ? (
-              <div className="hidden md:flex items-center gap-1.5 px-2 py-1 rounded-xl bg-white/[0.04] border border-[#5AA9E6]/30 hover:border-[#5AA9E6]/60 transition-colors">
-                <Building2 className="w-3.5 h-3.5 text-[#5AA9E6] shrink-0" />
-                <span className="text-[10px] text-[#94A3B8] uppercase font-bold tracking-wider hidden lg:inline">Empresa:</span>
-                <select
-                  value={selectedCompanyId}
-                  onChange={(e) => setSelectedCompanyId(e.target.value)}
-                  className="bg-transparent text-xs text-[#EAF4F4] font-bold focus:outline-none cursor-pointer pr-1"
-                >
-                  <option value="ALL" className="bg-[#222831] text-white">
-                    🏢 Todas las Empresas ({products.length} artículos)
-                  </option>
-                  {availableCompanies.map((c) => {
-                    const count = products.filter((p) => (p.companyId || "comp-mototaller") === c.id).length;
-                    return (
-                      <option key={c.id} value={c.id} className="bg-[#222831] text-white">
-                        {c.type === "TALLER_MOTOS" ? "🏍️ " : "🏪 "} {c.name} ({count} {c.type === "TALLER_MOTOS" ? "repuestos" : "artículos"})
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-            ) : (
-              <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/[0.03] border border-white/[0.08]">
-                <span className="text-xs">{activeCompany.type === "TALLER_MOTOS" ? "🏍️" : "🏪"}</span>
-                <span className="text-xs text-white font-semibold truncate max-w-[160px]">
-                  {activeCompany.name}
-                </span>
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setIsQuoteModalOpen(true)}
-              className="h-7.5 px-2.5 text-xs font-semibold cursor-pointer"
-              title="Crear nueva cotización"
-            >
-              <Calculator className="w-3.5 h-3.5 sm:mr-1 text-[#5AA9E6]" />
-              <span className="hidden sm:inline">Cotización</span>
-            </Button>
-
-            {isWorkshop && (
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => setIsOrderModalOpen(true)}
+                onClick={() => setIsQuoteModalOpen(true)}
                 className="h-7.5 px-2.5 text-xs font-semibold cursor-pointer"
-                title="Asignar repuestos a moto / Orden de trabajo"
+                title="Crear nueva cotización"
               >
-                <Package className="w-3.5 h-3.5 sm:mr-1 text-[#5AA9E6]" />
-                <span className="hidden sm:inline">Orden de Trabajo</span>
+                <Calculator className="w-3.5 h-3.5 sm:mr-1 text-[#5AA9E6]" />
+                <span className="hidden sm:inline">Cotización</span>
               </Button>
-            )}
 
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => setIsSaleModalOpen(true)}
-              className="h-7.5 px-3 text-xs font-bold cursor-pointer"
-              title="Facturar venta en mostrador (POS)"
-            >
-              <ShoppingCart className="w-3.5 h-3.5 sm:mr-1" />
-              <span>Nueva Venta</span>
-            </Button>
-          </div>
-        </header>
+              {isWorkshop && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setIsOrderModalOpen(true)}
+                  className="h-7.5 px-2.5 text-xs font-semibold cursor-pointer"
+                  title="Asignar repuestos a moto / Orden de trabajo"
+                >
+                  <Package className="w-3.5 h-3.5 sm:mr-1 text-[#5AA9E6]" />
+                  <span className="hidden sm:inline">Orden de Trabajo</span>
+                </Button>
+              )}
+
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setIsSaleModalOpen(true)}
+                className="h-7.5 px-3 text-xs font-bold cursor-pointer"
+                title="Facturar venta en mostrador (POS)"
+              >
+                <ShoppingCart className="w-3.5 h-3.5 sm:mr-1" />
+                <span>Nueva Venta</span>
+              </Button>
+            </div>
+          </header>
+        </div>
 
         {/* Contenido Separado por Módulos */}
-        <div className="p-3.5 sm:p-5 space-y-4 max-w-[1440px] w-full">
+        <div className="p-3.5 sm:p-5 pt-3.5 space-y-4 max-w-[1440px] w-full">
           {/* Alerta de Escáner */}
           {lastScanned && (
             <div className="p-3 rounded-xl bg-[#22D3EE]/10 border border-[#22D3EE]/30 flex items-center justify-between">
@@ -1374,15 +1379,15 @@ export default function DashboardPage() {
                 {activeTab}
               </h2>
               <p className="text-xs text-[#9CA3AF]">
-                {activeTab === "Dashboard" && "Métricas y resumen general de operaciones de tu almacén de repuestos."}
-                {activeTab === "Inventario & Kardex" && "Control de repuestos, stock mínimo y ubicación física en estantes."}
+                {activeTab === "Dashboard" && (isWorkshop ? "Métricas y resumen general de operaciones de tu almacén de repuestos." : `Métricas y resumen general de operaciones de ${activeCompany.name}.`)}
+                {activeTab === "Inventario & Kardex" && (isWorkshop ? "Control de repuestos, stock mínimo y ubicación física en estantes." : `Control de inventario, stock mínimo y precios de venta de ${activeCompany.name}.`)}
                 {activeTab === "Punto de Venta (POS)" && "Facturación rápida en mostrador con desglose por días y calendario."}
                 {activeTab === "Órdenes de Trabajo" && "Motos y clientes: asigna o retira repuestos entregados a cada vehículo en tiempo real."}
-                {activeTab === "Cotizaciones" && "Calcula cuánto se llevará en repuestos una moto para el cliente."}
-                {activeTab === "Créditos" && "Control de repuestos a crédito, fiados a clientes, registro de abonos y saldos pendientes."}
-                {activeTab === "Contabilidad & Caja" && "Flujo de caja, ventas de días anteriores con calendario y utilidad neta real."}
-                {activeTab === "Auditoría de Seguridad" && "Registro de seguridad de todas las acciones hechas en el taller."}
-                {activeTab === "Configuración" && "Ajusta nombre de taller, NIT, teléfono y datos del negocio."}
+                {activeTab === "Cotizaciones" && (isWorkshop ? "Calcula cuánto se llevará en repuestos una moto para el cliente." : "Genera cotizaciones y presupuestos formales para tus clientes.")}
+                {activeTab === "Créditos" && "Control de ventas a crédito, abonos de clientes y saldos pendientes."}
+                {activeTab === "Contabilidad & Caja" && "Flujo de caja, arqueo diario y balance financiero real."}
+                {activeTab === "Auditoría de Seguridad" && "Registro inmutable de seguridad de todas las operaciones del sistema."}
+                {activeTab === "Configuración" && "Ajusta datos del negocio, NIT, teléfono, usuarios y copias de seguridad."}
               </p>
             </div>
 
@@ -1394,7 +1399,7 @@ export default function DashboardPage() {
                 </Button>
                 <Button variant="primary" size="sm" onClick={() => setIsProductModalOpen(true)}>
                   <Plus className="w-3.5 h-3.5 mr-1" />
-                  Nuevo Repuesto
+                  {isWorkshop ? "Nuevo Repuesto" : "Nuevo Producto"}
                 </Button>
               </div>
             )}
@@ -1484,44 +1489,48 @@ export default function DashboardPage() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle>Listado de Repuestos & Ubicaciones Físicas</CardTitle>
+                  <CardTitle>{isWorkshop ? "Listado de Repuestos & Ubicaciones Físicas" : "Catálogo de Productos & Ubicaciones"}</CardTitle>
                   <CardDescription>
-                    Catálogo de repuestos con estantería física ({products.length} productos registrados).
+                    {isWorkshop
+                      ? `Catálogo de repuestos con estantería física (${companyProducts.length} productos registrados).`
+                      : `Catálogo general de inventario de ${activeCompany.name} (${companyProducts.length} productos registrados).`}
                   </CardDescription>
                 </div>
               </CardHeader>
               <CardContent>
-                {/* Filtros rápidos por motocicleta */}
-                <div className="flex flex-wrap items-center gap-1.5 mb-4 p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                  <span className="text-xs text-[#9CA3AF] mr-1 font-semibold uppercase tracking-wider">Motos:</span>
-                  {[
-                    { id: "TODAS", label: "Todas" },
-                    { id: "BOXER", label: "Boxer CT 100" },
-                    { id: "NKD", label: "AKT NKD 125" },
-                    { id: "ECO", label: "Hero Eco Deluxe" },
-                    { id: "FZ", label: "Yamaha FZ 16 / 2.0" },
-                    { id: "CRYPTON", label: "Crypton 115" },
-                    { id: "PULSAR", label: "Pulsar NS / 180" },
-                    { id: "SUZUKI", label: "Suzuki (AX4 / Gixxer)" },
-                    { id: "UNIVERSAL", label: "Aceites & Universales" },
-                  ].map((chip) => (
-                    <button
-                      key={chip.id}
-                      type="button"
-                      onClick={() => setMotorcycleFilter(chip.id)}
-                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer ${
-                        motorcycleFilter === chip.id
-                          ? "bg-[#5AA9E6] text-white shadow-md font-bold"
-                          : "bg-white/[0.04] text-[#9CA3AF] hover:bg-white/[0.08] hover:text-white"
-                      }`}
-                    >
-                      {chip.label}
-                    </button>
-                  ))}
-                  <span className="ml-auto text-xs text-[#9CA3AF]">
-                    Mostrando <b className="text-white">{filteredProducts.length}</b> repuestos
-                  </span>
-                </div>
+                {/* Filtros rápidos por motocicleta (Solo visibles si es taller de motos) */}
+                {isWorkshop && (
+                  <div className="flex flex-wrap items-center gap-1.5 mb-4 p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+                    <span className="text-xs text-[#9CA3AF] mr-1 font-semibold uppercase tracking-wider">Motos:</span>
+                    {[
+                      { id: "TODAS", label: "Todas" },
+                      { id: "BOXER", label: "Boxer CT 100" },
+                      { id: "NKD", label: "AKT NKD 125" },
+                      { id: "ECO", label: "Hero Eco Deluxe" },
+                      { id: "FZ", label: "Yamaha FZ 16 / 2.0" },
+                      { id: "CRYPTON", label: "Crypton 115" },
+                      { id: "PULSAR", label: "Pulsar NS / 180" },
+                      { id: "SUZUKI", label: "Suzuki (AX4 / Gixxer)" },
+                      { id: "UNIVERSAL", label: "Aceites & Universales" },
+                    ].map((chip) => (
+                      <button
+                        key={chip.id}
+                        type="button"
+                        onClick={() => setMotorcycleFilter(chip.id)}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer ${
+                          motorcycleFilter === chip.id
+                            ? "bg-[#5AA9E6] text-white shadow-md font-bold"
+                            : "bg-white/[0.04] text-[#9CA3AF] hover:bg-white/[0.08] hover:text-white"
+                        }`}
+                      >
+                        {chip.label}
+                      </button>
+                    ))}
+                    <span className="ml-auto text-xs text-[#9CA3AF]">
+                      Mostrando <b className="text-white">{filteredProducts.length}</b> repuestos
+                    </span>
+                  </div>
+                )}
 
                 {filteredProducts.length === 0 ? (
                   <div className="py-12 text-center space-y-3">
@@ -1529,25 +1538,16 @@ export default function DashboardPage() {
                     <p className="text-sm font-semibold text-white">
                       Esta empresa ({activeCompany.name}) no tiene artículos en su inventario.
                     </p>
-                    <p className="text-xs text-[#9CA3AF] max-w-md mx-auto">
-                      Los <b>{products.length} repuestos</b> de motocicletas están guardados en <b>MotoTaller TS7</b>. Puedes cambiar al taller en la barra superior o hacer clic aquí abajo:
+                    <p className="text-xs text-[#94A3B8] max-w-md mx-auto">
+                      Comienza agregando productos a tu catálogo para registrar stock, precios de venta y facturar en el punto de venta.
                     </p>
                     <div className="flex justify-center gap-2 pt-2">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => setSelectedCompanyId("comp-mototaller")}
-                        className="cursor-pointer font-semibold text-[#5AA9E6]"
-                      >
-                        🏍️ Ver Inventario del Taller ({products.length} repuestos)
-                      </Button>
                       <Button
                         type="button"
                         variant="primary"
                         size="sm"
                         onClick={() => setIsProductModalOpen(true)}
-                        className="cursor-pointer"
+                        className="cursor-pointer font-bold"
                       >
                         <Plus className="w-4 h-4 mr-1" />
                         Agregar Producto a {activeCompany.name}
@@ -1559,11 +1559,11 @@ export default function DashboardPage() {
                     <table className="w-full text-left text-sm">
                       <thead className="text-xs uppercase text-[#9CA3AF] border-b border-white/[0.08]">
                         <tr>
-                          <th className="pb-3 font-semibold">SKU / Repuesto</th>
+                          <th className="pb-3 font-semibold">{isWorkshop ? "SKU / Repuesto" : "Código / Producto"}</th>
                           <th className="pb-3 font-semibold whitespace-nowrap min-w-[180px]">Ubicación Física</th>
                           <th className="pb-3 font-semibold">Stock Actual</th>
                           <th className="pb-3 font-semibold">Precio Venta</th>
-                          <th className="pb-3 font-semibold">Compatibilidad</th>
+                          <th className="pb-3 font-semibold">{isWorkshop ? "Compatibilidad" : "Categoría / Detalle"}</th>
                           {(user.role === "SUPERADMIN" || user.role === "ADMIN") && (
                             <th className="pb-3 font-semibold text-right">Acción</th>
                           )}
@@ -1607,7 +1607,7 @@ export default function DashboardPage() {
                                 ${prod.salePrice.toLocaleString("es-CO")} COP
                               </td>
                               <td className="py-3.5 text-xs text-[#9CA3AF]">
-                                {prod.motorcycleFit || "Universal"}
+                                {prod.motorcycleFit || (isWorkshop ? "Universal" : "General")}
                               </td>
                               {(user.role === "SUPERADMIN" || user.role === "ADMIN") && (
                                 <td className="py-3.5 text-right">

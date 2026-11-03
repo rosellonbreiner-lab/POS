@@ -12,6 +12,7 @@ interface CreateQuoteModalProps {
   onClose: () => void;
   onQuoteCreated: (createdQuote?: any) => void;
   products: any[];
+  companyId?: string;
 }
 
 export function CreateQuoteModal({
@@ -19,6 +20,7 @@ export function CreateQuoteModal({
   onClose,
   onQuoteCreated,
   products,
+  companyId,
 }: CreateQuoteModalProps) {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -131,6 +133,7 @@ export function CreateQuoteModal({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          companyId,
           customerName: customerName || "Cliente Cotización",
           customerPhone,
           plate: plate.toUpperCase().trim(),

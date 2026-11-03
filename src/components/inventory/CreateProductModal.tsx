@@ -12,6 +12,9 @@ interface CreateProductModalProps {
   onClose: () => void;
   onProductCreated: () => void;
   initialBarcode?: string;
+  companyId?: string;
+  companyName?: string;
+  companyType?: string;
 }
 
 export function CreateProductModal({
@@ -19,7 +22,11 @@ export function CreateProductModal({
   onClose,
   onProductCreated,
   initialBarcode = "",
+  companyId,
+  companyName,
+  companyType = "TALLER_MOTOS",
 }: CreateProductModalProps) {
+  const isWorkshop = companyType === "TALLER_MOTOS";
   const [sku, setSku] = useState("");
   const [barcode, setBarcode] = useState(initialBarcode);
   const [name, setName] = useState("");
@@ -54,6 +61,7 @@ export function CreateProductModal({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          companyId,
           sku,
           barcode: barcode || undefined,
           name,
@@ -76,7 +84,7 @@ export function CreateProductModal({
       onProductCreated();
       onClose();
     } catch (err: any) {
-      setError(err.message || "Error al registrar repuesto");
+      setError(err.message || "Error al registrar producto");
     } finally {
       setLoading(false);
     }
@@ -103,10 +111,12 @@ export function CreateProductModal({
           <CardHeader className="pb-3 border-b border-white/[0.08]">
             <div className="flex items-center gap-2 text-[#5AA9E6]">
               <Package className="w-5 h-5" />
-              <CardTitle>Registrar Nuevo Repuesto</CardTitle>
+              <CardTitle>{isWorkshop ? "Registrar Nuevo Repuesto" : `Registrar Nuevo Producto (${companyName || "Empresa"})`}</CardTitle>
             </div>
             <p className="text-xs text-[#9CA3AF]">
-              Ingrese los datos y la ubicación física en estantería para despacho rápido.
+              {isWorkshop
+                ? "Ingrese los datos y la ubicación física en estantería para despacho rápido."
+                : "Ingrese los datos del producto y su ubicación en estantería o almacén."}
             </p>
           </CardHeader>
 
@@ -161,19 +171,23 @@ export function CreateProductModal({
               </div>
 
               <div>
-                <label className="text-xs text-[#9CA3AF] font-medium block mb-1">Nombre del Repuesto *</label>
+                <label className="text-xs text-[#9CA3AF] font-medium block mb-1">
+                  {isWorkshop ? "Nombre del Repuesto *" : "Nombre del Producto / Artículo *"}
+                </label>
                 <Input
                   required
-                  placeholder="Ej. Pastillas de freno delanteras"
+                  placeholder={isWorkshop ? "Ej. Pastillas de freno delanteras" : "Ej. Taladro percutor 1/2 pulg, Cemento Gris, etc."}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                 />
               </div>
 
               <div>
-                <label className="text-xs text-[#9CA3AF] font-medium block mb-1">Motos Compatibles</label>
+                <label className="text-xs text-[#9CA3AF] font-medium block mb-1">
+                  {isWorkshop ? "Motos Compatibles" : "Categoría / Marca / Detalle (Opcional)"}
+                </label>
                 <Input
-                  placeholder="Ej. Yamaha YBR 125, Libero 125"
+                  placeholder={isWorkshop ? "Ej. Yamaha YBR 125, Libero 125" : "Ej. DeWalt, Stanley, 110V, etc."}
                   value={motorcycleFit}
                   onChange={(e) => setMotorcycleFit(e.target.value)}
                 />
@@ -205,7 +219,7 @@ export function CreateProductModal({
               {/* Ubicación Física */}
               <div className="p-3.5 rounded-xl bg-white/[0.04] border border-white/[0.08] space-y-2">
                 <span className="text-xs font-semibold text-[#22D3EE] uppercase tracking-wider block">
-                  Ubicación Física en Taller
+                  {isWorkshop ? "Ubicación Física en Taller" : "Ubicación en Almacén / Estante"}
                 </span>
                 <div className="grid grid-cols-3 gap-2">
                   <div>
@@ -276,7 +290,7 @@ export function CreateProductModal({
                   className="px-6 py-2.5 font-bold shadow-xl shadow-[#5AA9E6]/30 text-white bg-[#5AA9E6] hover:bg-[#468ec7]"
                 >
                   <Plus className="w-4 h-4 mr-1.5" />
-                  {loading ? "Guardando..." : "Guardar Repuesto"}
+                  {loading ? "Guardando..." : (isWorkshop ? "Guardar Repuesto" : "Guardar Producto")}
                 </Button>
               </div>
             </form>

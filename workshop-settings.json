@@ -40,7 +40,9 @@
     "barosellon@ferro.co": "comp-ferromax-3613"
   },
   "invoiceCompanies": {},
-  "productCompanies": {},
+  "productCompanies": {
+    "dd5d434d-066b-499a-abd4-cfa04cb7c543": "comp-ferromax-3613"
+  },
   "orderCompanies": {},
   "quoteCompanies": {},
   "userCredentials": {

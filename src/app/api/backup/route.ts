@@ -189,3 +189,4 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: error.message || "Error al eliminar archivo" }, { status: 500 });
   }
 }
+
