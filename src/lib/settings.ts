@@ -13,7 +13,15 @@ export interface Company {
   address: string;
   logoUrl?: string;
   receiptMessage?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
   createdAt?: string;
+}
+
+export interface AuthorCreditSettings {
+  enabled: boolean;
+  text: string;
+  url: string;
 }
 
 export interface BackupSettings {
@@ -43,6 +51,8 @@ export const defaultCompanies: Company[] = [
     address: "Calle 16 # 10-45, Maicao, La Guajira",
     logoUrl: "",
     receiptMessage: "¡Gracias por confiar en nosotros! Garantía de 30 días en repuestos con este ticket.",
+    primaryColor: "#5AA9E6",
+    secondaryColor: "#1F3A5F",
     createdAt: "2026-10-28T00:00:00.000Z",
   },
 ];
@@ -78,6 +88,7 @@ export const defaultSettings = {
     ADMIN: {
       "Dashboard": true,
       "Inventario & Kardex": true,
+      "Bajo Stock": true,
       "Punto de Venta (POS)": true,
       "Órdenes de Trabajo": true,
       "Cotizaciones": true,
@@ -88,6 +99,7 @@ export const defaultSettings = {
     TRABAJADOR: {
       "Dashboard": true,
       "Inventario & Kardex": true,
+      "Bajo Stock": true,
       "Punto de Venta (POS)": true,
       "Órdenes de Trabajo": true,
       "Cotizaciones": true,
@@ -113,6 +125,11 @@ export const defaultSettings = {
     },
   },
   backupSettings: defaultBackupSettings,
+  authorCredit: {
+    enabled: true,
+    text: "By Breiner Rosellon",
+    url: "https://github.com/rosellonbreiner-lab/POS",
+  },
 };
 
 export function getSettings() {
@@ -159,6 +176,10 @@ export function getSettings() {
         backupSettings: {
           ...defaultBackupSettings,
           ...(parsed.backupSettings || {}),
+        },
+        authorCredit: {
+          ...defaultSettings.authorCredit,
+          ...(parsed.authorCredit || {}),
         },
       };
     }

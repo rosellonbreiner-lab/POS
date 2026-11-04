@@ -29,6 +29,13 @@ import {
   X,
   Building2,
   Store,
+  Sparkles,
+  ExternalLink,
+  Copy,
+  Check,
+  Send,
+  PackageCheck,
+  ArrowRight,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -54,6 +61,7 @@ import { CameraScannerModal } from "@/components/common/CameraScannerModal";
 const TAB_TO_PATH: Record<string, string> = {
   "Dashboard": "/dashboard",
   "Inventario & Kardex": "/inventario",
+  "Bajo Stock": "/bajo-stock",
   "Punto de Venta (POS)": "/pos",
   "Órdenes de Trabajo": "/ordenes",
   "Cotizaciones": "/cotizaciones",
@@ -67,6 +75,7 @@ const PATH_TO_TAB: Record<string, string> = {
   "/": "Dashboard",
   "/dashboard": "Dashboard",
   "/inventario": "Inventario & Kardex",
+  "/bajo-stock": "Bajo Stock",
   "/pos": "Punto de Venta (POS)",
   "/ventas": "Punto de Venta (POS)",
   "/ordenes": "Órdenes de Trabajo",
@@ -119,6 +128,13 @@ export default function DashboardPage() {
   const [quoteToDelete, setQuoteToDelete] = useState<any | null>(null);
   const [quoteToConvert, setQuoteToConvert] = useState<any | null>(null);
   const [convertPaymentType, setConvertPaymentType] = useState<string>("EFECTIVO");
+
+  // Estados del Módulo de Bajo Stock & Pedidos Rápidos
+  const [lowStockSearch, setLowStockSearch] = useState("");
+  const [lowStockFilter, setLowStockFilter] = useState<"TODOS" | "AGOTADOS" | "BAJO">("TODOS");
+  const [orderQuantities, setOrderQuantities] = useState<Record<string, number>>({});
+  const [quickStockUpdating, setQuickStockUpdating] = useState<string | null>(null);
+  const [copiedToWhatsApp, setCopiedToWhatsApp] = useState(false);
 
   // Multi-Empresa (Soporte para múltiples microempresas: Talleres de motos, tiendas, minimarkets)
   const [availableCompanies, setAvailableCompanies] = useState<any[]>([]);
@@ -225,28 +241,49 @@ export default function DashboardPage() {
     }
   }, [availableCompanies, user, selectedCompanyId]);
 
-  // Empresa activa actual calculada
+  // Empresa activa actual calculada con paleta de colores personalizada
   const activeCompany = useMemo(() => {
     if (selectedCompanyId && selectedCompanyId !== "ALL") {
       const found = availableCompanies.find((c) => c.id === selectedCompanyId);
-      if (found) return found;
+      if (found) {
+        return {
+          ...found,
+          primaryColor: found.primaryColor || "#5AA9E6",
+          secondaryColor: found.secondaryColor || "#1F3A5F",
+        };
+      }
     }
-    if (user?.company) return user.company;
-    if (availableCompanies.length > 0) return availableCompanies[0];
+    if (user?.company) {
+      return {
+        ...user.company,
+        primaryColor: user.company.primaryColor || "#5AA9E6",
+        secondaryColor: user.company.secondaryColor || "#1F3A5F",
+      };
+    }
+    if (availableCompanies.length > 0) {
+      return {
+        ...availableCompanies[0],
+        primaryColor: availableCompanies[0].primaryColor || "#5AA9E6",
+        secondaryColor: availableCompanies[0].secondaryColor || "#1F3A5F",
+      };
+    }
     return {
       id: "comp-mototaller",
       name: workshopConfig?.name || "MotoTaller TS7",
-      type: "TALLER_MOTOS",
+      type: "TALLER_MOTOS" as const,
       slogan: workshopConfig?.slogan || "Especialistas en Reparación y Repuestos Multimarca",
       nit: workshopConfig?.nit || "901.452.889-1",
       phone: workshopConfig?.phone || "(+57) 300 123 4567",
       address: workshopConfig?.address || "Calle 16 # 10-45, Maicao, La Guajira",
       receiptMessage: workshopConfig?.receiptMessage || "¡Gracias por su compra!",
       logoUrl: workshopConfig?.logoUrl || "",
+      primaryColor: workshopConfig?.primaryColor || "#5AA9E6",
+      secondaryColor: workshopConfig?.secondaryColor || "#1F3A5F",
     };
   }, [selectedCompanyId, availableCompanies, user, workshopConfig]);
 
-  const isWorkshop = selectedCompanyId === "ALL" || activeCompany.type === "TALLER_MOTOS";
+  // Solo es taller de motos si la empresa seleccionada es explícitamente TALLER_MOTOS
+  const isWorkshop = selectedCompanyId === "ALL" ? false : activeCompany.type === "TALLER_MOTOS";
 
   // Aislamiento Multi-Empresa: Filtrado de datos por empresa activa
   const filteredInvoices = useMemo(() => {
@@ -258,6 +295,28 @@ export default function DashboardPage() {
     if (selectedCompanyId === "ALL") return products;
     return products.filter((p) => (p.companyId || "comp-mototaller") === selectedCompanyId);
   }, [products, selectedCompanyId]);
+
+  // Artículos con bajo stock para la empresa activa
+  const lowStockProducts = useMemo(() => {
+    return companyProducts.filter((p) => p.currentStock <= p.minStock);
+  }, [companyProducts]);
+
+  const outOfStockCount = useMemo(() => {
+    return lowStockProducts.filter((p) => p.currentStock === 0).length;
+  }, [lowStockProducts]);
+
+  const getSuggestedUnits = (p: any) => {
+    if (orderQuantities[p.id] !== undefined) return orderQuantities[p.id];
+    return Math.max(1, p.minStock * 2 - p.currentStock);
+  };
+
+  const totalSuggestedUnits = useMemo(() => {
+    return lowStockProducts.reduce((sum, p) => sum + getSuggestedUnits(p), 0);
+  }, [lowStockProducts, orderQuantities]);
+
+  const totalEstimatedInvestment = useMemo(() => {
+    return lowStockProducts.reduce((sum, p) => sum + getSuggestedUnits(p) * (p.costPrice || 0), 0);
+  }, [lowStockProducts, orderQuantities]);
 
   const filteredOrders = useMemo(() => {
     if (!isWorkshop) return [];
@@ -487,6 +546,73 @@ export default function DashboardPage() {
     });
   }, [companyProducts, motorcycleFilter]);
 
+  // Copiar lista de pedido formateada para WhatsApp
+  const handleCopyWhatsAppOrder = () => {
+    if (lowStockProducts.length === 0) return;
+    const dateStr = new Date().toLocaleDateString("es-CO", { year: "numeric", month: "2-digit", day: "2-digit" });
+    let msg = `📦 *ORDEN DE PEDIDO / REPOSICIÓN DE MERCANCÍA*\n`;
+    msg += `🏢 Negocio: *${activeCompany.name}*\n`;
+    if (activeCompany.nit) msg += `📄 NIT / ID: ${activeCompany.nit}\n`;
+    if (activeCompany.phone) msg += `📞 Contacto: ${activeCompany.phone}\n`;
+    msg += `📅 Fecha: ${dateStr}\n`;
+    msg += `-------------------------------------------\n`;
+    msg += `*LISTA DE ARTÍCULOS A PEDIR:*\n\n`;
+
+    lowStockProducts.forEach((p, idx) => {
+      const qty = getSuggestedUnits(p);
+      msg += `${idx + 1}. *${p.name}*\n`;
+      if (p.sku) msg += `   • Código/SKU: ${p.sku}\n`;
+      if (p.category) msg += `   • Categoría: ${p.category}\n`;
+      msg += `   • Stock actual: ${p.currentStock} (Mínimo: ${p.minStock})\n`;
+      msg += `   • 👉 *CANTIDAD SOLICITADA: ${qty} unidades*\n\n`;
+    });
+
+    msg += `-------------------------------------------\n`;
+    msg += `📊 *TOTALES DEL PEDIDO:*\n`;
+    msg += `• Artículos por reponer: ${lowStockProducts.length}\n`;
+    msg += `• Unidades totales a pedir: ${totalSuggestedUnits}\n`;
+    if (totalEstimatedInvestment > 0) {
+      msg += `• Inversión estimada costo: $${totalEstimatedInvestment.toLocaleString("es-CO")} COP\n`;
+    }
+    msg += `\n_Generado automáticamente desde el Sistema POS & Gestión Comercial._`;
+
+    navigator.clipboard.writeText(msg).then(() => {
+      setCopiedToWhatsApp(true);
+      setNotificationMsg({
+        type: "success",
+        text: "¡Lista de pedido copiada! Puedes pegarla directamente en WhatsApp a tu proveedor.",
+      });
+      setTimeout(() => setCopiedToWhatsApp(false), 3500);
+    });
+  };
+
+  // Ajuste rápido de stock al recibir mercancía de proveedores
+  const handleQuickAddStock = async (productId: string, addQty: number) => {
+    setQuickStockUpdating(productId);
+    try {
+      const res = await fetch(`/api/products/${productId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ addStock: addQty }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setNotificationMsg({
+        type: "success",
+        text: `¡Stock actualizado exitosamente (+${addQty} unidades)!`,
+      });
+      await loadAllData();
+    } catch (err: any) {
+      setNotificationMsg({
+        type: "error",
+        text: err.message || "Error al actualizar stock",
+      });
+    } finally {
+      setQuickStockUpdating(null);
+    }
+  };
+
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     setUser(null);
@@ -502,6 +628,12 @@ export default function DashboardPage() {
     const allItems = [
       { label: "Dashboard", icon: BarChart3 },
       { label: "Inventario & Kardex", icon: Package, badge: `${filteredProducts.length}` },
+      {
+        label: "Bajo Stock",
+        icon: AlertTriangle,
+        badge: lowStockProducts.length > 0 ? `${lowStockProducts.length}` : undefined,
+        isAlert: lowStockProducts.length > 0,
+      },
       {
         label: "Punto de Venta (POS)",
         icon: ShoppingCart,
@@ -1210,18 +1342,31 @@ export default function DashboardPage() {
                 <button
                   key={idx}
                   onClick={() => navigateToTab(item.label)}
-                  className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg transition-colors cursor-pointer text-left ${
+                  className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg transition-all cursor-pointer text-left ${
                     active
-                      ? "bg-[#5AA9E6]/20 text-[#5AA9E6] border border-[#5AA9E6]/40 font-semibold"
+                      ? "text-white font-semibold shadow-sm"
                       : "text-[#9CA3AF] hover:text-white hover:bg-white/[0.05]"
                   }`}
+                  style={{
+                    backgroundColor: active ? `${activeCompany.primaryColor || "#5AA9E6"}22` : undefined,
+                    borderColor: active ? `${activeCompany.primaryColor || "#5AA9E6"}55` : "transparent",
+                    borderWidth: 1,
+                    color: active ? (activeCompany.primaryColor || "#5AA9E6") : undefined,
+                  }}
                 >
                   <div className="flex items-center gap-2.5">
                     <item.icon className="w-3.5 h-3.5 shrink-0" />
                     <span>{item.label}</span>
                   </div>
                   {item.badge && (
-                    <Badge variant={active ? "primary" : "neutral"} className="text-[10px] py-0 px-1.5">
+                    <Badge
+                      variant={item.isAlert ? "warning" : active ? "primary" : "neutral"}
+                      className={`text-[10px] py-0 px-1.5 ${
+                        item.isAlert
+                          ? "bg-amber-500/25 text-amber-300 border border-amber-500/40 animate-pulse font-bold"
+                          : ""
+                      }`}
+                    >
                       {item.badge}
                     </Badge>
                   )}
@@ -1231,37 +1376,57 @@ export default function DashboardPage() {
           </nav>
         </div>
 
-        {/* Perfil del usuario activo y Salir */}
-        <div className="pt-3 border-t border-white/[0.08] flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold border ${
-              user.role === "SUPERADMIN"
-                ? "bg-[#22D3EE]/20 text-[#22D3EE] border-[#22D3EE]/40"
-                : user.role === "ADMIN"
-                ? "bg-[#5AA9E6]/20 text-[#5AA9E6] border-[#5AA9E6]/40"
-                : "bg-white/[0.1] text-white border-white/20"
-            }`}>
-              {user.name.substring(0, 2).toUpperCase()}
+        {/* Sección inferior del Sidebar: Créditos de Autor y Perfil */}
+        <div className="space-y-2">
+          {/* Botón By Breiner Rosellon si está activo desde Superadmin */}
+          {workshopConfig?.authorCredit?.enabled !== false && (
+            <div className="pt-2 pb-1 border-t border-white/[0.06] flex justify-center">
+              <a
+                href={workshopConfig?.authorCredit?.url || "https://github.com/rosellonbreiner-lab/POS"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#1F3A5F]/70 hover:bg-[#1F3A5F] border border-[#5AA9E6]/40 hover:border-[#5AA9E6] text-[#5AA9E6] hover:text-white text-[10px] font-semibold transition-all hover:scale-105 group"
+                title="Desarrollado por Breiner Rosellon"
+              >
+                <Sparkles className="w-3 h-3 text-[#5AA9E6] group-hover:rotate-12 transition-transform" />
+                <span>{workshopConfig?.authorCredit?.text || "By Breiner Rosellon"}</span>
+                <ExternalLink className="w-2.5 h-2.5 opacity-70 group-hover:opacity-100" />
+              </a>
             </div>
-            <div className="text-[11px] leading-tight">
-              <p className="font-medium text-white truncate max-w-[110px]">{user.name}</p>
-              <p className="text-[#9CA3AF] text-[9px] font-mono">{user.role}</p>
+          )}
+
+          {/* Perfil del usuario activo y Salir */}
+          <div className="pt-2 border-t border-white/[0.08] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold border ${
+                user.role === "SUPERADMIN"
+                  ? "bg-[#22D3EE]/20 text-[#22D3EE] border-[#22D3EE]/40"
+                  : user.role === "ADMIN"
+                  ? "bg-[#5AA9E6]/20 text-[#5AA9E6] border-[#5AA9E6]/40"
+                  : "bg-white/[0.1] text-white border-white/20"
+              }`}>
+                {user.name.substring(0, 2).toUpperCase()}
+              </div>
+              <div className="text-[11px] leading-tight">
+                <p className="font-medium text-white truncate max-w-[110px]">{user.name}</p>
+                <p className="text-[#9CA3AF] text-[9px] font-mono">{user.role}</p>
+              </div>
             </div>
+            <button 
+              onClick={handleLogout}
+              className="text-[#9CA3AF] hover:text-[#F87171] p-1.5 rounded-md hover:bg-white/[0.05] transition-colors cursor-pointer" 
+              title="Cerrar sesión"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
           </div>
-          <button 
-            onClick={handleLogout}
-            className="text-[#9CA3AF] hover:text-[#F87171] p-1.5 rounded-md hover:bg-white/[0.05] transition-colors cursor-pointer" 
-            title="Cerrar sesión"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-          </button>
         </div>
       </aside>
 
       {/* Área Principal */}
       <main className="flex-1 flex flex-col min-w-0">
         {/* Topbar alineado perfectamente con los recuadros de abajo */}
-        <div className="px-3.5 sm:px-5 pt-3.5 sm:pt-4 sticky top-0 z-20 max-w-[1440px] w-full">
+        <div className="px-4 sm:px-6 pt-4 sticky top-0 z-20 w-full">
           <header className="h-12 border border-white/[0.12] rounded-2xl px-4 sm:px-5 flex items-center justify-between glass gap-3 shadow-lg shadow-black/30">
             {/* Botón Menú Móvil */}
             <div className="flex items-center gap-2.5">
@@ -1355,8 +1520,8 @@ export default function DashboardPage() {
           </header>
         </div>
 
-        {/* Contenido Separado por Módulos */}
-        <div className="p-3.5 sm:p-5 pt-3.5 space-y-4 max-w-[1440px] w-full">
+        {/* Contenido Separado por Módulos (Alineado pixel a pixel con el topbar) */}
+        <div className="px-4 sm:px-6 pt-4 pb-8 space-y-4 w-full">
           {/* Alerta de Escáner */}
           {lastScanned && (
             <div className="p-3 rounded-xl bg-[#22D3EE]/10 border border-[#22D3EE]/30 flex items-center justify-between">
@@ -1381,6 +1546,7 @@ export default function DashboardPage() {
               <p className="text-xs text-[#9CA3AF]">
                 {activeTab === "Dashboard" && (isWorkshop ? "Métricas y resumen general de operaciones de tu almacén de repuestos." : `Métricas y resumen general de operaciones de ${activeCompany.name}.`)}
                 {activeTab === "Inventario & Kardex" && (isWorkshop ? "Control de repuestos, stock mínimo y ubicación física en estantes." : `Control de inventario, stock mínimo y precios de venta de ${activeCompany.name}.`)}
+                {activeTab === "Bajo Stock" && `Monitorea existencias críticas de ${activeCompany.name}, calcula reposición de faltantes y genera pedidos para WhatsApp.`}
                 {activeTab === "Punto de Venta (POS)" && "Facturación rápida en mostrador con desglose por días y calendario."}
                 {activeTab === "Órdenes de Trabajo" && "Motos y clientes: asigna o retira repuestos entregados a cada vehículo en tiempo real."}
                 {activeTab === "Cotizaciones" && (isWorkshop ? "Calcula cuánto se llevará en repuestos una moto para el cliente." : "Genera cotizaciones y presupuestos formales para tus clientes.")}
@@ -1400,6 +1566,40 @@ export default function DashboardPage() {
                 <Button variant="primary" size="sm" onClick={() => setIsProductModalOpen(true)}>
                   <Plus className="w-3.5 h-3.5 mr-1" />
                   {isWorkshop ? "Nuevo Repuesto" : "Nuevo Producto"}
+                </Button>
+              </div>
+            )}
+            {activeTab === "Bajo Stock" && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => window.print()}
+                  className="cursor-pointer font-medium text-xs h-8"
+                  title="Imprimir hoja de pedido para distribuidores"
+                >
+                  <Printer className="w-3.5 h-3.5 mr-1 text-[#5AA9E6]" />
+                  <span>Imprimir Lista</span>
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleCopyWhatsAppOrder}
+                  disabled={lowStockProducts.length === 0}
+                  className="cursor-pointer font-bold text-xs h-8 bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-950/40"
+                  title="Copiar pedido formateado para enviar a proveedores"
+                >
+                  {copiedToWhatsApp ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 mr-1" />
+                      <span>¡Copiado a WhatsApp!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 mr-1" />
+                      <span>Copiar Pedido a WhatsApp</span>
+                    </>
+                  )}
                 </Button>
               </div>
             )}
@@ -1600,7 +1800,20 @@ export default function DashboardPage() {
                                 <div className="flex items-center gap-2">
                                   <span className="font-bold tabular-nums text-white">{prod.currentStock}</span>
                                   <span className="text-xs text-[#9CA3AF]">/ mín {prod.minStock}</span>
-                                  {isLow && <Badge variant="warning">Reponer</Badge>}
+                                  {isLow && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigateToTab("Bajo Stock");
+                                      }}
+                                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[10px] font-bold cursor-pointer transition-all shadow-sm hover:scale-105"
+                                      title="Ir al módulo de Bajo Stock para generar pedido a proveedor"
+                                    >
+                                      <AlertTriangle className="w-3 h-3 text-amber-400" />
+                                      <span>Bajo Stock · Reponer →</span>
+                                    </button>
+                                  )}
                                 </div>
                               </td>
                               <td className="py-3.5 tabular-nums font-semibold text-white">
@@ -1632,6 +1845,329 @@ export default function DashboardPage() {
                 )}
               </CardContent>
             </Card>
+          )}
+
+          {/* 2.5 MÓDULO EXCLUSIVO DE BAJO STOCK & PEDIDOS RÁPIDOS A PROVEEDORES */}
+          {activeTab === "Bajo Stock" && (
+            <div className="space-y-4">
+              {/* 4 KPIs de Resumen de Pedidos */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <Card className="p-3.5 bg-gradient-to-br from-amber-500/10 to-transparent border-amber-500/30">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-semibold">Artículos Bajo Stock</p>
+                      <p className="text-2xl font-bold text-amber-300 mt-0.5 tabular-nums">{lowStockProducts.length}</p>
+                    </div>
+                    <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                      <AlertTriangle className="w-5 h-5" />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-[#94A3B8] mt-2">
+                    Productos con stock ≤ mínimo establecido
+                  </p>
+                </Card>
+
+                <Card className="p-3.5 bg-gradient-to-br from-red-500/10 to-transparent border-red-500/30">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-semibold">Agotados Críticos (0)</p>
+                      <p className="text-2xl font-bold text-red-400 mt-0.5 tabular-nums">{outOfStockCount}</p>
+                    </div>
+                    <div className="w-9 h-9 rounded-xl bg-red-500/15 border border-red-500/30 flex items-center justify-center text-red-400">
+                      <PackageCheck className="w-5 h-5" />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-[#94A3B8] mt-2">
+                    Sin existencias disponibles en almacén
+                  </p>
+                </Card>
+
+                <Card className="p-3.5 bg-gradient-to-br from-[#5AA9E6]/10 to-transparent border-[#5AA9E6]/30">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-semibold">Total Unidades a Pedir</p>
+                      <p className="text-2xl font-bold text-[#5AA9E6] mt-0.5 tabular-nums">{totalSuggestedUnits}</p>
+                    </div>
+                    <div className="w-9 h-9 rounded-xl bg-[#5AA9E6]/15 border border-[#5AA9E6]/30 flex items-center justify-center text-[#5AA9E6]">
+                      <ShoppingCart className="w-5 h-5" />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-[#94A3B8] mt-2">
+                    Sugerido para restablecer inventario
+                  </p>
+                </Card>
+
+                <Card className="p-3.5 bg-gradient-to-br from-emerald-500/10 to-transparent border-emerald-500/30">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-semibold">Inversión Costo Estimada</p>
+                      <p className="text-2xl font-bold text-emerald-400 mt-0.5 tabular-nums">
+                        ${totalEstimatedInvestment.toLocaleString("es-CO")}
+                      </p>
+                    </div>
+                    <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                      <DollarSign className="w-5 h-5" />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-[#94A3B8] mt-2">
+                    Calculado a precio de costo de compra
+                  </p>
+                </Card>
+              </div>
+
+              {/* Tarjeta Principal de la Tabla de Bajo Stock */}
+              <Card>
+                <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-400" />
+                      Lista de Artículos para Reposición & Pedidos a Proveedores
+                    </CardTitle>
+                    <CardDescription>
+                      Ajusta las cantidades requeridas y copia la orden completa directamente a WhatsApp con un solo clic.
+                    </CardDescription>
+                  </div>
+
+                  {/* Barra de Filtros y Búsqueda */}
+                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                    <div className="w-48 sm:w-56">
+                      <Input
+                        icon={<Search className="w-3.5 h-3.5 text-[#5AA9E6]" />}
+                        placeholder="Buscar por nombre, SKU..."
+                        value={lowStockSearch}
+                        onChange={(e) => setLowStockSearch(e.target.value)}
+                        className="h-8 text-xs"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white/[0.04] border border-white/[0.08]">
+                      <button
+                        type="button"
+                        onClick={() => setLowStockFilter("TODOS")}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors cursor-pointer ${
+                          lowStockFilter === "TODOS"
+                            ? "bg-[#5AA9E6] text-white"
+                            : "text-[#9CA3AF] hover:text-white"
+                        }`}
+                      >
+                        Todos ({lowStockProducts.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLowStockFilter("AGOTADOS")}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors cursor-pointer ${
+                          lowStockFilter === "AGOTADOS"
+                            ? "bg-red-500 text-white"
+                            : "text-[#9CA3AF] hover:text-white"
+                        }`}
+                      >
+                        Agotados ({outOfStockCount})
+                      </button>
+                    </div>
+                  </div>
+                </CardHeader>
+
+                <CardContent>
+                  {(() => {
+                    const displayItems = lowStockProducts.filter((p) => {
+                      const matchesQuery =
+                        !lowStockSearch ||
+                        p.name.toLowerCase().includes(lowStockSearch.toLowerCase()) ||
+                        (p.sku && p.sku.toLowerCase().includes(lowStockSearch.toLowerCase())) ||
+                        (p.category && p.category.toLowerCase().includes(lowStockSearch.toLowerCase()));
+
+                      if (!matchesQuery) return false;
+                      if (lowStockFilter === "AGOTADOS") return p.currentStock === 0;
+                      return true;
+                    });
+
+                    if (displayItems.length === 0) {
+                      return (
+                        <div className="py-12 text-center space-y-3">
+                          <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto opacity-70" />
+                          <h4 className="text-base font-bold text-white">
+                            {lowStockProducts.length === 0
+                              ? `¡Todo en orden! ${activeCompany.name} no tiene artículos con bajo stock.`
+                              : "No hay artículos que coincidan con la búsqueda."}
+                          </h4>
+                          <p className="text-xs text-[#94A3B8] max-w-md mx-auto">
+                            {lowStockProducts.length === 0
+                              ? "Todas las existencias se encuentran por encima del stock mínimo establecido. Puedes continuar vendiendo con normalidad."
+                              : "Intenta cambiar el término de búsqueda o el filtro seleccionado arriba."}
+                          </p>
+                          {lowStockProducts.length === 0 && (
+                            <div className="pt-2">
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => navigateToTab("Inventario & Kardex")}
+                                className="cursor-pointer font-semibold"
+                              >
+                                <Package className="w-3.5 h-3.5 mr-1 text-[#5AA9E6]" />
+                                Ver Catálogo Completo
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                          <thead className="text-xs uppercase text-[#9CA3AF] border-b border-white/[0.08]">
+                            <tr>
+                              <th className="py-3 px-1 font-semibold">Producto / Referencia</th>
+                              <th className="py-3 font-semibold">Stock Actual</th>
+                              <th className="py-3 font-semibold">Mínimo</th>
+                              <th className="py-3 font-semibold">Estado</th>
+                              <th className="py-3 font-semibold text-center">Unidades a Pedir</th>
+                              <th className="py-3 font-semibold">Costo Unit.</th>
+                              <th className="py-3 font-semibold">Subtotal Sugerido</th>
+                              <th className="py-3 font-semibold text-right">Recepción Rápida</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-white/[0.04]">
+                            {displayItems.map((prod) => {
+                              const isOut = prod.currentStock === 0;
+                              const suggested = getSuggestedUnits(prod);
+                              const subtotal = suggested * (prod.costPrice || 0);
+                              const stockPct = prod.minStock > 0 ? Math.min(100, Math.round((prod.currentStock / prod.minStock) * 100)) : 0;
+
+                              return (
+                                <tr key={prod.id} className="hover:bg-white/[0.02] transition-colors">
+                                  <td className="py-3.5 px-1">
+                                    <div className="font-semibold text-white leading-tight">{prod.name}</div>
+                                    <div className="flex items-center gap-2 text-xs text-[#9CA3AF] mt-0.5">
+                                      <span className="font-mono text-[11px] text-[#5AA9E6]">SKU: {prod.sku || "N/A"}</span>
+                                      <span>•</span>
+                                      <span className="text-[11px]">{prod.category || "General"}</span>
+                                    </div>
+                                  </td>
+
+                                  <td className="py-3.5">
+                                    <div className="flex items-center gap-2">
+                                      <span className={`font-bold tabular-nums text-sm ${isOut ? "text-red-400" : "text-amber-300"}`}>
+                                        {prod.currentStock} uds
+                                      </span>
+                                    </div>
+                                    {/* Barra de progreso de nivel de stock */}
+                                    <div className="w-24 h-1.5 rounded-full bg-white/[0.08] mt-1 overflow-hidden">
+                                      <div
+                                        className={`h-full rounded-full ${isOut ? "bg-red-500" : "bg-amber-400"}`}
+                                        style={{ width: `${Math.max(5, stockPct)}%` }}
+                                      />
+                                    </div>
+                                  </td>
+
+                                  <td className="py-3.5 tabular-nums text-xs text-[#9CA3AF]">
+                                    {prod.minStock} uds
+                                  </td>
+
+                                  <td className="py-3.5">
+                                    {isOut ? (
+                                      <Badge variant="danger" className="text-[10px] font-bold">
+                                        AGOTADO (0)
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="warning" className="text-[10px] font-bold">
+                                        BAJO STOCK
+                                      </Badge>
+                                    )}
+                                  </td>
+
+                                  {/* Cantidad sugerida con botones + y - interactivos */}
+                                  <td className="py-3.5">
+                                    <div className="flex items-center justify-center gap-1.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const current = suggested;
+                                          if (current > 1) {
+                                            setOrderQuantities({ ...orderQuantities, [prod.id]: current - 1 });
+                                          }
+                                        }}
+                                        className="w-6 h-6 rounded-md bg-white/[0.06] hover:bg-white/[0.12] text-white flex items-center justify-center font-bold text-xs cursor-pointer"
+                                        title="Disminuir unidad a pedir"
+                                      >
+                                        -
+                                      </button>
+                                      <input
+                                        type="number"
+                                        min="1"
+                                        value={suggested}
+                                        onChange={(e) => {
+                                          const val = parseInt(e.target.value) || 1;
+                                          setOrderQuantities({ ...orderQuantities, [prod.id]: Math.max(1, val) });
+                                        }}
+                                        className="w-14 h-7 text-center text-xs font-bold font-mono text-white bg-[#1a1d28] border border-white/[0.12] rounded-md focus:outline-none focus:border-[#5AA9E6]"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const current = suggested;
+                                          setOrderQuantities({ ...orderQuantities, [prod.id]: current + 1 });
+                                        }}
+                                        className="w-6 h-6 rounded-md bg-white/[0.06] hover:bg-white/[0.12] text-white flex items-center justify-center font-bold text-xs cursor-pointer"
+                                        title="Aumentar unidad a pedir"
+                                      >
+                                        +
+                                      </button>
+                                    </div>
+                                  </td>
+
+                                  <td className="py-3.5 tabular-nums text-xs text-[#9CA3AF]">
+                                    ${(prod.costPrice || 0).toLocaleString("es-CO")} COP
+                                  </td>
+
+                                  <td className="py-3.5 tabular-nums font-semibold text-emerald-400 text-xs">
+                                    ${subtotal.toLocaleString("es-CO")} COP
+                                  </td>
+
+                                  {/* Botones de recepción rápida cuando llega mercancía */}
+                                  <td className="py-3.5 text-right">
+                                    <div className="flex items-center justify-end gap-1">
+                                      <span className="text-[10px] text-[#94A3B8] hidden xl:inline mr-1">Llegó:</span>
+                                      <button
+                                        type="button"
+                                        disabled={quickStockUpdating === prod.id}
+                                        onClick={() => handleQuickAddStock(prod.id, 5)}
+                                        className="px-2 py-1 rounded bg-[#5AA9E6]/15 hover:bg-[#5AA9E6]/25 text-[#5AA9E6] border border-[#5AA9E6]/30 text-[10px] font-bold cursor-pointer transition-colors disabled:opacity-50"
+                                        title="Sumar 5 unidades al inventario"
+                                      >
+                                        +5
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={quickStockUpdating === prod.id}
+                                        onClick={() => handleQuickAddStock(prod.id, 10)}
+                                        className="px-2 py-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold cursor-pointer transition-colors disabled:opacity-50"
+                                        title="Sumar 10 unidades al inventario"
+                                      >
+                                        +10
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={quickStockUpdating === prod.id}
+                                        onClick={() => handleQuickAddStock(prod.id, suggested)}
+                                        className="px-2 py-1 rounded bg-white/[0.06] hover:bg-white/[0.12] text-white border border-white/20 text-[10px] font-bold cursor-pointer transition-colors disabled:opacity-50"
+                                        title={`Sumar las ${suggested} unidades solicitadas al inventario`}
+                                      >
+                                        +{suggested} (Todo)
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {/* 3. MÓDULO ÓRDENES DE TRABAJO (Con gestión dinámica de repuestos) */}

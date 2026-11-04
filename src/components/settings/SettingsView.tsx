@@ -37,8 +37,21 @@ import {
   FileArchive,
   Shield,
   HardDrive,
+  Palette,
+  Sparkles,
+  ExternalLink,
+  Link2,
 } from "lucide-react";
 import { TicketModal, TicketData } from "@/components/common/TicketModal";
+
+const COLOR_PALETTES = [
+  { name: "Azul Cyan Tech", primary: "#5AA9E6", secondary: "#1F3A5F" },
+  { name: "Verde Esmeralda", primary: "#10B981", secondary: "#064E3B" },
+  { name: "Naranja Ferretería", primary: "#F97316", secondary: "#7C2D12" },
+  { name: "Rojo Racing", primary: "#EF4444", secondary: "#7F1D1D" },
+  { name: "Púrpura Neón", primary: "#A855F7", secondary: "#581C87" },
+  { name: "Ámbar Industrial", primary: "#F59E0B", secondary: "#78350F" },
+];
 
 interface SettingsViewProps {
   user: any;
@@ -68,7 +81,17 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
     phone: "",
     address: "",
     receiptMessage: "¡Gracias por su compra! Vuelva pronto.",
+    primaryColor: "#5AA9E6",
+    secondaryColor: "#1F3A5F",
   });
+
+  // Créditos de autor By Breiner Rosellon (Hipervínculo activable desde Superadmin)
+  const [authorCredit, setAuthorCredit] = useState({
+    enabled: true,
+    text: "By Breiner Rosellon",
+    url: "https://github.com/rosellonbreiner-lab/POS",
+  });
+  const [savingAuthorCredit, setSavingAuthorCredit] = useState(false);
 
   // Configuración general
   const [config, setConfig] = useState<any>({
@@ -325,6 +348,9 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
         if (data.config.companies) {
           setCompaniesList(data.config.companies);
         }
+        if (data.config.authorCredit) {
+          setAuthorCredit(data.config.authorCredit);
+        }
       }
     } catch (e) {
       console.error("Error loading settings:", e);
@@ -483,6 +509,8 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
         phone: "",
         address: "",
         receiptMessage: "¡Gracias por su compra! Vuelva pronto.",
+        primaryColor: "#5AA9E6",
+        secondaryColor: "#1F3A5F",
       });
       await loadCompanies();
       await loadSettings();
@@ -543,6 +571,29 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
       setMsg({ type: "error", text: err.message || "Error al eliminar empresa" });
     } finally {
       setCompanyActionLoading(false);
+    }
+  };
+
+  const handleSaveAuthorCredit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setSavingAuthorCredit(true);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ authorCredit }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setMsg({ type: "success", text: "¡Configuración de botón By Breiner Rosellon actualizada exitosamente!" });
+      await loadSettings();
+      if (onRefreshGlobal) onRefreshGlobal();
+    } catch (err: any) {
+      setMsg({ type: "error", text: err.message || "Error al guardar créditos de autor" });
+    } finally {
+      setSavingAuthorCredit(false);
     }
   };
 
@@ -958,11 +1009,20 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
                       </div>
 
                       <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between">
-                        <div className="flex items-center gap-1.5 text-xs text-[#94A3B8]">
-                          <Users className="w-3.5 h-3.5 text-[#5AA9E6]" />
-                          <span>
-                            <b>{assignedUsers.length}</b> usuario(s) asignado(s)
-                          </span>
+                        <div className="flex items-center gap-2 text-xs text-[#94A3B8]">
+                          <div className="flex items-center gap-1">
+                            <Users className="w-3.5 h-3.5 text-[#5AA9E6]" />
+                            <span>
+                              <b>{assignedUsers.length}</b> user(s)
+                            </span>
+                          </div>
+
+                          {/* Muestra de la paleta de colores */}
+                          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-black/40 border border-white/[0.06] text-[10px]" title="Paleta de Colores de la Empresa">
+                            <span className="text-[#94A3B8]">Paleta:</span>
+                            <div className="w-3 h-3 rounded-full border border-white/20 shadow-sm" style={{ backgroundColor: comp.primaryColor || "#5AA9E6" }} title={`Primario: ${comp.primaryColor || "#5AA9E6"}`} />
+                            <div className="w-3 h-3 rounded-full border border-white/20 shadow-sm" style={{ backgroundColor: comp.secondaryColor || "#1F3A5F" }} title={`Secundario: ${comp.secondaryColor || "#1F3A5F"}`} />
+                          </div>
                         </div>
 
                         <div className="flex items-center gap-1.5">
@@ -994,6 +1054,108 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
                     </div>
                   );
                 })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* TARJETA DE CRÉDITOS DE AUTOR: BY BREINER ROSELLON */}
+          <Card className="border-[#5AA9E6]/30 bg-gradient-to-br from-[#1F3A5F]/20 via-[#222831]/80 to-[#222831]">
+            <CardHeader className="pb-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-[#5AA9E6]" />
+                    Créditos de Autor & Marca Personal (By Breiner Rosellon)
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Controla la visibilidad y destino del botón / hipervínculo en el pie de página del sistema (Login y Barra lateral).
+                  </CardDescription>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <label className="text-xs font-semibold text-[#94A3B8]">Estado:</label>
+                  <button
+                    type="button"
+                    onClick={() => setAuthorCredit({ ...authorCredit, enabled: !authorCredit.enabled })}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer border ${
+                      authorCredit.enabled
+                        ? "bg-[#5AA9E6]/20 text-[#5AA9E6] border-[#5AA9E6]/40"
+                        : "bg-white/[0.05] text-[#94A3B8] border-white/10"
+                    }`}
+                  >
+                    {authorCredit.enabled ? <ToggleRight className="w-4 h-4 text-[#5AA9E6]" /> : <ToggleLeft className="w-4 h-4 text-[#94A3B8]" />}
+                    <span>{authorCredit.enabled ? "Activo (Visible)" : "Desactivado (Oculto)"}</span>
+                  </button>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#94A3B8] block">
+                    Texto del Botón / Hipervínculo
+                  </label>
+                  <Input
+                    value={authorCredit.text}
+                    onChange={(e) => setAuthorCredit({ ...authorCredit, text: e.target.value })}
+                    placeholder="By Breiner Rosellon"
+                    className="h-8 text-xs font-medium"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#94A3B8] block flex items-center gap-1">
+                    <Link2 className="w-3.5 h-3.5 text-[#5AA9E6]" />
+                    Enlace URL de Destino (Hipervínculo)
+                  </label>
+                  <Input
+                    value={authorCredit.url}
+                    onChange={(e) => setAuthorCredit({ ...authorCredit, url: e.target.value })}
+                    placeholder="https://..."
+                    className="h-8 text-xs font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Vista previa interactiva */}
+              <div className="p-3.5 rounded-xl bg-black/40 border border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="text-xs text-[#94A3B8]">
+                  <span className="font-semibold text-white block">Vista Previa del Botón:</span>
+                  <span className="text-[11px]">Haz clic para verificar que el enlace abra correctamente la página web.</span>
+                </div>
+
+                <div>
+                  {authorCredit.enabled ? (
+                    <a
+                      href={authorCredit.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#1F3A5F]/80 hover:bg-[#1F3A5F] border border-[#5AA9E6]/50 text-[#5AA9E6] hover:text-white text-xs font-semibold shadow-lg shadow-[#1F3A5F]/40 transition-all hover:scale-105"
+                      title="Probar hipervínculo"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-[#5AA9E6]" />
+                      <span>{authorCredit.text || "By Breiner Rosellon"}</span>
+                      <ExternalLink className="w-3 h-3 opacity-70" />
+                    </a>
+                  ) : (
+                    <span className="text-xs text-[#94A3B8] italic">(Botón oculto actualmente en el sistema)</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  disabled={savingAuthorCredit}
+                  onClick={() => handleSaveAuthorCredit()}
+                  className="cursor-pointer font-bold text-xs"
+                >
+                  <Save className="w-3.5 h-3.5 mr-1" />
+                  {savingAuthorCredit ? "Guardando..." : "Guardar Configuración de Créditos"}
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -2685,6 +2847,77 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
                 />
               </div>
 
+              {/* Selector de Paleta de Colores de la Marca */}
+              <div className="space-y-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-white flex items-center gap-1.5">
+                    <Palette className="w-3.5 h-3.5 text-[#5AA9E6]" />
+                    Paleta de Colores de la Marca (Personalización)
+                  </label>
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-white/20 bg-black/40 text-[10px] font-bold">
+                    <span style={{ color: newCompanyData.primaryColor }}>Acento</span>
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: newCompanyData.primaryColor }} />
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: newCompanyData.secondaryColor }} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <span className="text-[11px] text-[#94A3B8] block">Color Primario (Acento / Botones)</span>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={newCompanyData.primaryColor || "#5AA9E6"}
+                        onChange={(e) => setNewCompanyData({ ...newCompanyData, primaryColor: e.target.value })}
+                        className="w-8 h-8 rounded-lg cursor-pointer bg-transparent border border-white/20 p-0.5"
+                      />
+                      <Input
+                        value={newCompanyData.primaryColor || "#5AA9E6"}
+                        onChange={(e) => setNewCompanyData({ ...newCompanyData, primaryColor: e.target.value })}
+                        className="h-8 text-xs font-mono"
+                        placeholder="#5AA9E6"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-[11px] text-[#94A3B8] block">Color Secundario (Fondo / Tarjetas)</span>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={newCompanyData.secondaryColor || "#1F3A5F"}
+                        onChange={(e) => setNewCompanyData({ ...newCompanyData, secondaryColor: e.target.value })}
+                        className="w-8 h-8 rounded-lg cursor-pointer bg-transparent border border-white/20 p-0.5"
+                      />
+                      <Input
+                        value={newCompanyData.secondaryColor || "#1F3A5F"}
+                        onChange={(e) => setNewCompanyData({ ...newCompanyData, secondaryColor: e.target.value })}
+                        className="h-8 text-xs font-mono"
+                        placeholder="#1F3A5F"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Paletas Rápidas */}
+                <div>
+                  <span className="text-[10px] text-[#94A3B8] block mb-1">Paletas Rápidas Prediseñadas:</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {COLOR_PALETTES.map((pal) => (
+                      <button
+                        key={pal.name}
+                        type="button"
+                        onClick={() => setNewCompanyData({ ...newCompanyData, primaryColor: pal.primary, secondaryColor: pal.secondary })}
+                        className="px-2 py-0.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-[10px] text-[#EAF4F4] flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: pal.primary }} />
+                        <span>{pal.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
               <div className="flex justify-end gap-2 pt-2 border-t border-white/[0.08]">
                 <Button
                   type="button"
@@ -2811,6 +3044,77 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
                   onChange={(e) => setCompanyToEdit({ ...companyToEdit, receiptMessage: e.target.value })}
                   className="h-8 text-xs"
                 />
+              </div>
+
+              {/* Selector de Paleta de Colores de la Marca (Editar) */}
+              <div className="space-y-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-white flex items-center gap-1.5">
+                    <Palette className="w-3.5 h-3.5 text-[#5AA9E6]" />
+                    Paleta de Colores de la Marca (Personalización)
+                  </label>
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-white/20 bg-black/40 text-[10px] font-bold">
+                    <span style={{ color: companyToEdit.primaryColor || "#5AA9E6" }}>Acento</span>
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: companyToEdit.primaryColor || "#5AA9E6" }} />
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: companyToEdit.secondaryColor || "#1F3A5F" }} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <span className="text-[11px] text-[#94A3B8] block">Color Primario (Acento / Botones)</span>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={companyToEdit.primaryColor || "#5AA9E6"}
+                        onChange={(e) => setCompanyToEdit({ ...companyToEdit, primaryColor: e.target.value })}
+                        className="w-8 h-8 rounded-lg cursor-pointer bg-transparent border border-white/20 p-0.5"
+                      />
+                      <Input
+                        value={companyToEdit.primaryColor || "#5AA9E6"}
+                        onChange={(e) => setCompanyToEdit({ ...companyToEdit, primaryColor: e.target.value })}
+                        className="h-8 text-xs font-mono"
+                        placeholder="#5AA9E6"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-[11px] text-[#94A3B8] block">Color Secundario (Fondo / Tarjetas)</span>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={companyToEdit.secondaryColor || "#1F3A5F"}
+                        onChange={(e) => setCompanyToEdit({ ...companyToEdit, secondaryColor: e.target.value })}
+                        className="w-8 h-8 rounded-lg cursor-pointer bg-transparent border border-white/20 p-0.5"
+                      />
+                      <Input
+                        value={companyToEdit.secondaryColor || "#1F3A5F"}
+                        onChange={(e) => setCompanyToEdit({ ...companyToEdit, secondaryColor: e.target.value })}
+                        className="h-8 text-xs font-mono"
+                        placeholder="#1F3A5F"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Paletas Rápidas */}
+                <div>
+                  <span className="text-[10px] text-[#94A3B8] block mb-1">Paletas Rápidas Prediseñadas:</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {COLOR_PALETTES.map((pal) => (
+                      <button
+                        key={pal.name}
+                        type="button"
+                        onClick={() => setCompanyToEdit({ ...companyToEdit, primaryColor: pal.primary, secondaryColor: pal.secondary })}
+                        className="px-2 py-0.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-[10px] text-[#EAF4F4] flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: pal.primary }} />
+                        <span>{pal.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-2 border-t border-white/[0.08]">

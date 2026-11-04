@@ -17,6 +17,8 @@
       "address": "Calle 16 # 10-45, Maicao, La Guajira",
       "logoUrl": "",
       "receiptMessage": "¡Gracias por confiar en nosotros! Garantía de 30 días en repuestos con este ticket.",
+      "primaryColor": "#5AA9E6",
+      "secondaryColor": "#1F3A5F",
       "createdAt": "2026-10-28T00:00:00.000Z"
     },
     {
@@ -29,6 +31,8 @@
       "address": "",
       "logoUrl": "",
       "receiptMessage": "¡Gracias por su compra! Vuelva pronto.",
+      "primaryColor": "#F97316",
+      "secondaryColor": "#7C2D12",
       "createdAt": "2026-11-03T19:14:43.613Z"
     }
   ],
@@ -96,5 +100,10 @@
     "maxBackupsToKeep": 7,
     "lastBackupAt": "2026-11-03T19:17:46.658Z",
     "nextBackupAt": "2026-11-04T19:17:46.731Z"
+  },
+  "authorCredit": {
+    "enabled": true,
+    "text": "By Breiner Rosellon",
+    "url": "https://github.com/rosellonbreiner-lab/POS"
   }
 }

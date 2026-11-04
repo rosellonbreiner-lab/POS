@@ -41,6 +41,8 @@ export async function PATCH(
       address: body.address !== undefined ? body.address.trim() : currentCompany.address,
       logoUrl: body.logoUrl !== undefined ? body.logoUrl : currentCompany.logoUrl,
       receiptMessage: body.receiptMessage !== undefined ? body.receiptMessage.trim() : currentCompany.receiptMessage,
+      primaryColor: body.primaryColor !== undefined ? body.primaryColor.trim() : (currentCompany.primaryColor || "#5AA9E6"),
+      secondaryColor: body.secondaryColor !== undefined ? body.secondaryColor.trim() : (currentCompany.secondaryColor || "#1F3A5F"),
     };
 
     companies[index] = updatedCompany;

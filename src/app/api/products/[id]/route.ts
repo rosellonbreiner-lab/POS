@@ -72,3 +72,74 @@ export async function DELETE(
   }
 }
 
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  if (!id) {
+    return NextResponse.json({ error: "ID del producto requerido" }, { status: 400 });
+  }
+
+  try {
+    const body = await request.json();
+    const { addStock, currentStock, minStock, costPrice, sellingPrice } = body;
+
+    const existing = await prisma.product.findUnique({ where: { id } });
+    if (!existing) {
+      return NextResponse.json({ error: "El producto no existe." }, { status: 404 });
+    }
+
+    let newStock = existing.currentStock;
+    if (addStock !== undefined && typeof addStock === "number") {
+      newStock = Math.max(0, existing.currentStock + addStock);
+    } else if (currentStock !== undefined && typeof currentStock === "number") {
+      newStock = Math.max(0, currentStock);
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const p = await tx.product.update({
+        where: { id },
+        data: {
+          currentStock: newStock,
+          ...(minStock !== undefined ? { minStock } : {}),
+          ...(costPrice !== undefined ? { costPrice } : {}),
+          ...(sellingPrice !== undefined ? { sellingPrice } : {}),
+        },
+      });
+
+      if (addStock && addStock > 0) {
+        await tx.stockMovement.create({
+          data: {
+            productId: id,
+            type: "ENTRADA_COMPRA",
+            quantity: addStock,
+            previousQty: existing.currentStock,
+            newQty: newStock,
+            reason: `Reposición de mercancía / Pedido a proveedor (+${addStock} uds)`,
+          },
+        });
+      }
+
+      return p;
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: `Stock actualizado a ${updated.currentStock} unidades.`,
+      product: updated,
+    });
+  } catch (error: any) {
+    console.error("Error al actualizar stock de producto:", error);
+    return NextResponse.json(
+      { error: error?.message || "Error al actualizar stock de producto." },
+      { status: 500 }
+    );
+  }
+}
+

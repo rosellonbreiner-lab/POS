@@ -30,7 +30,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { name, type, slogan, nit, phone, address, logoUrl, receiptMessage } = body;
+    const { name, type, slogan, nit, phone, address, logoUrl, receiptMessage, primaryColor, secondaryColor } = body;
 
     if (!name || !name.trim()) {
       return NextResponse.json({ error: "El nombre de la empresa es obligatorio." }, { status: 400 });
@@ -60,6 +60,8 @@ export async function POST(request: Request) {
       address: address ? address.trim() : "",
       logoUrl: logoUrl || "",
       receiptMessage: receiptMessage ? receiptMessage.trim() : "¡Gracias por su compra! Vuelva pronto.",
+      primaryColor: primaryColor?.trim() || "#5AA9E6",
+      secondaryColor: secondaryColor?.trim() || "#1F3A5F",
       createdAt: new Date().toISOString(),
     };
 

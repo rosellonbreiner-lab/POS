@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { Lock, Mail, ShieldAlert, ArrowRight, Layers } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Lock, Mail, ShieldAlert, ArrowRight, Layers, Sparkles, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { SystemDashboardAnime } from "./SystemDashboardAnime";
+import { ExecutiveAvatar } from "./ExecutiveAvatar";
 
 interface LoginPageProps {
   onLoginSuccess: (user: any) => void;
@@ -16,6 +17,32 @@ export function LoginForm({ onLoginSuccess }: LoginPageProps) {
   const [loading, setLoading] = useState(false);
   const [isEntering, setIsEntering] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Estados interactivos para el muñequito ejecutivo
+  const [isEmailFocused, setIsEmailFocused] = useState(false);
+  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
+
+  // Créditos del autor configurables desde Superadmin
+  const [authorCredit, setAuthorCredit] = useState<{
+    enabled: boolean;
+    text: string;
+    url: string;
+  }>({
+    enabled: true,
+    text: "By Breiner Rosellon",
+    url: "https://github.com/rosellonbreiner-lab/POS",
+  });
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.config?.authorCredit) {
+          setAuthorCredit(data.config.authorCredit);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,9 +135,13 @@ export function LoginForm({ onLoginSuccess }: LoginPageProps) {
             {/* Barra superior con gradiente de la paleta */}
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#1F3A5F] via-[#5AA9E6] to-[#1F3A5F]"></div>
 
-            <div className="text-center mb-6">
-              <div className="mx-auto w-12 h-12 rounded-2xl bg-[#1F3A5F]/80 border border-[#5AA9E6]/40 flex items-center justify-center text-[#5AA9E6] shadow-lg shadow-[#1F3A5F]/50 mb-3">
-                <Lock className="w-6 h-6" />
+            <div className="text-center mb-5">
+              {/* Muñequito Ejecutivo Interactivo: Sigue el mouse y se tapa los ojos al escribir contraseña */}
+              <div className="mb-2">
+                <ExecutiveAvatar
+                  isCoveringEyes={isPasswordFocused}
+                  isTypingEmail={isEmailFocused}
+                />
               </div>
               <h3 className="text-xl font-bold text-[#EAF4F4]">
                 Acceso al Sistema
@@ -138,6 +169,8 @@ export function LoginForm({ onLoginSuccess }: LoginPageProps) {
                   icon={<Mail className="w-4 h-4 text-[#5AA9E6]" />}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  onFocus={() => setIsEmailFocused(true)}
+                  onBlur={() => setIsEmailFocused(false)}
                   placeholder="usuario@sistema.com"
                 />
               </div>
@@ -152,6 +185,8 @@ export function LoginForm({ onLoginSuccess }: LoginPageProps) {
                   icon={<Lock className="w-4 h-4 text-[#5AA9E6]" />}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  onFocus={() => setIsPasswordFocused(true)}
+                  onBlur={() => setIsPasswordFocused(false)}
                   placeholder="••••••••••••"
                 />
               </div>
@@ -181,9 +216,22 @@ export function LoginForm({ onLoginSuccess }: LoginPageProps) {
         </div>
       </main>
 
-      {/* Footer minimalista */}
-      <footer className="relative z-10 p-4 text-center text-xs text-[#94A3B8]/80 max-w-7xl mx-auto w-full">
-        Sistema de Gestión Comercial & POS © 2026 · Eficiencia y Control
+      {/* Footer minimalista con botón/hipervínculo By Breiner Rosellon */}
+      <footer className="relative z-10 p-4 text-xs text-[#94A3B8]/80 max-w-7xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-3">
+        <span>Sistema de Gestión Comercial & POS © 2026 · Eficiencia y Control</span>
+        {authorCredit.enabled && (
+          <a
+            href={authorCredit.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#1F3A5F]/80 hover:bg-[#1F3A5F] border border-[#5AA9E6]/50 text-[#5AA9E6] hover:text-white text-xs font-semibold shadow-lg shadow-[#1F3A5F]/40 transition-all hover:scale-105 group"
+            title="Desarrollado por Breiner Rosellon"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-[#5AA9E6] group-hover:rotate-12 transition-transform" />
+            <span>{authorCredit.text}</span>
+            <ExternalLink className="w-3 h-3 opacity-70 group-hover:opacity-100" />
+          </a>
+        )}
       </footer>
     </div>
   );
