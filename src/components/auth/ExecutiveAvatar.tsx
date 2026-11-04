@@ -309,3 +309,4 @@ export function ExecutiveAvatar({
     </div>
   );
 }
+

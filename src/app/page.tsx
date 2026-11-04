@@ -87,6 +87,13 @@ const PATH_TO_TAB: Record<string, string> = {
   "/configuracion": "Configuración",
 };
 
+const getCategoryDisplayName = (cat: any): string => {
+  if (!cat) return "General";
+  if (typeof cat === "string") return cat;
+  if (typeof cat === "object" && cat.name) return String(cat.name);
+  return "General";
+};
+
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -562,7 +569,8 @@ export default function DashboardPage() {
       const qty = getSuggestedUnits(p);
       msg += `${idx + 1}. *${p.name}*\n`;
       if (p.sku) msg += `   • Código/SKU: ${p.sku}\n`;
-      if (p.category) msg += `   • Categoría: ${p.category}\n`;
+      const catName = getCategoryDisplayName(p.category);
+      if (catName && catName !== "General") msg += `   • Categoría: ${catName}\n`;
       msg += `   • Stock actual: ${p.currentStock} (Mínimo: ${p.minStock})\n`;
       msg += `   • 👉 *CANTIDAD SOLICITADA: ${qty} unidades*\n\n`;
     });
@@ -1970,11 +1978,12 @@ export default function DashboardPage() {
                 <CardContent>
                   {(() => {
                     const displayItems = lowStockProducts.filter((p) => {
+                      const catName = getCategoryDisplayName(p.category);
                       const matchesQuery =
                         !lowStockSearch ||
                         p.name.toLowerCase().includes(lowStockSearch.toLowerCase()) ||
                         (p.sku && p.sku.toLowerCase().includes(lowStockSearch.toLowerCase())) ||
-                        (p.category && p.category.toLowerCase().includes(lowStockSearch.toLowerCase()));
+                        catName.toLowerCase().includes(lowStockSearch.toLowerCase());
 
                       if (!matchesQuery) return false;
                       if (lowStockFilter === "AGOTADOS") return p.currentStock === 0;
@@ -2041,7 +2050,7 @@ export default function DashboardPage() {
                                     <div className="flex items-center gap-2 text-xs text-[#9CA3AF] mt-0.5">
                                       <span className="font-mono text-[11px] text-[#5AA9E6]">SKU: {prod.sku || "N/A"}</span>
                                       <span>•</span>
-                                      <span className="text-[11px]">{prod.category || "General"}</span>
+                                      <span className="text-[11px]">{getCategoryDisplayName(prod.category)}</span>
                                     </div>
                                   </td>
 
