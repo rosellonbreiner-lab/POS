@@ -65,7 +65,8 @@
       "Cotizaciones": true,
       "Créditos": true,
       "Contabilidad & Caja": true,
-      "Configuración": true
+      "Configuración": true,
+      "Bajo Stock": true
     },
     "TRABAJADOR": {
       "Dashboard": true,
@@ -75,7 +76,8 @@
       "Cotizaciones": true,
       "Créditos": false,
       "Contabilidad & Caja": false,
-      "Configuración": false
+      "Configuración": false,
+      "Bajo Stock": true
     }
   },
   "roleFeaturePermissions": {
@@ -98,8 +100,8 @@
     "enabled": true,
     "intervalHours": 24,
     "maxBackupsToKeep": 7,
-    "lastBackupAt": "2026-11-03T19:17:46.658Z",
-    "nextBackupAt": "2026-11-04T19:17:46.731Z"
+    "lastBackupAt": "2026-11-04T21:22:14.171Z",
+    "nextBackupAt": "2026-11-05T21:22:14.278Z"
   },
   "authorCredit": {
     "enabled": true,
