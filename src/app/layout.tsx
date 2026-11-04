@@ -21,8 +21,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MotoTaller — Sistema de Gestión",
-  description: "Sistema web integral para taller de motocicletas (inventario, POS, cotizaciones, órdenes y contabilidad)",
+  title: "Sistema de Gestión Comercial & POS",
+  description: "Plataforma web integral para control de inventario, punto de venta (POS), cotizaciones, flujo de caja y facturación multinegocio.",
 };
 
 export default function RootLayout({
