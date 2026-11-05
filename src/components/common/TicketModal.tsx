@@ -86,7 +86,7 @@ const FORMAT_CONFIGS: Record<PaperFormat, {
   },
 };
 
-const CALIBRATION_VERSION = "v3_75mm_tmu220";
+const CALIBRATION_VERSION = "v4_75mm_wordwrap";
 
 export function TicketModal({ isOpen, onClose, data }: TicketModalProps) {
   const [paperFormat, setPaperFormat] = useState<PaperFormat>("TM_U220");
@@ -101,7 +101,7 @@ export function TicketModal({ isOpen, onClose, data }: TicketModalProps) {
     if (typeof window !== "undefined") {
       const savedVersion = localStorage.getItem("pos_ticket_version");
       if (savedVersion !== CALIBRATION_VERSION) {
-        // Auto-migración a la versión calibrada para Rollo de 7.5cm / Epson TM-U220
+        // Auto-migración a la versión con salto de línea inteligente y calibrada para 7.5cm
         localStorage.setItem("pos_ticket_version", CALIBRATION_VERSION);
         localStorage.setItem("pos_ticket_paper_format", "TM_U220");
         localStorage.setItem("pos_ticket_custom_width", "66mm");
@@ -189,10 +189,11 @@ export function TicketModal({ isOpen, onClose, data }: TicketModalProps) {
   /**
    * Renderizador del cuerpo del ticket
    * Calibrado para alta legibilidad en impresoras matriciales (Epson TM-U220)
-   * Usa texto 100% negro puro, negrita firme y unidades relativas para escalar.
+   * Con SALTO DE LÍNEA AUTOMÁTICO (word-wrap) en cualquier información que no entre,
+   * garantizando que nada se recorte ni se pierda hacia la derecha.
    */
   const renderTicketBody = () => (
-    <div className="w-full text-black font-mono leading-tight select-text text-left">
+    <div className="w-full text-black font-mono leading-tight select-text text-left break-words [overflow-wrap:anywhere] [word-break:break-word] whitespace-normal">
       {/* Logo si existe (compacto, alto contraste para cinta de tinta) */}
       {data.workshopConfig.logoUrl ? (
         <div className="text-center mb-1.5">
@@ -206,26 +207,26 @@ export function TicketModal({ isOpen, onClose, data }: TicketModalProps) {
 
       {/* Encabezado del Negocio */}
       <div className="text-center space-y-0.5 text-black">
-        <div className="text-[1.2em] font-black tracking-wide uppercase leading-tight">
+        <div className="text-[1.2em] font-black tracking-wide uppercase leading-tight break-words [overflow-wrap:anywhere]">
           {data.workshopConfig.name || "SISTEMA POS"}
         </div>
 
         {data.workshopConfig.slogan && (
-          <div className="text-[0.9em] font-bold italic truncate">
+          <div className="text-[0.9em] font-bold italic break-words [overflow-wrap:anywhere] whitespace-normal leading-snug">
             {data.workshopConfig.slogan}
           </div>
         )}
 
         {(data.workshopConfig.nit || data.workshopConfig.phone) && (
-          <div className="text-[0.95em] font-bold">
-            {data.workshopConfig.nit ? `NIT: ${data.workshopConfig.nit}` : ""}
-            {data.workshopConfig.nit && data.workshopConfig.phone ? " · " : ""}
-            {data.workshopConfig.phone ? `TEL: ${data.workshopConfig.phone}` : ""}
+          <div className="text-[0.95em] font-bold break-words [overflow-wrap:anywhere] whitespace-normal flex flex-wrap justify-center gap-x-1.5">
+            {data.workshopConfig.nit && <span>NIT: {data.workshopConfig.nit}</span>}
+            {data.workshopConfig.nit && data.workshopConfig.phone && <span>·</span>}
+            {data.workshopConfig.phone && <span>TEL: {data.workshopConfig.phone}</span>}
           </div>
         )}
 
         {data.workshopConfig.address && (
-          <div className="text-[0.9em] font-bold truncate">
+          <div className="text-[0.9em] font-bold break-words [overflow-wrap:anywhere] whitespace-normal leading-snug">
             {data.workshopConfig.address}
           </div>
         )}
@@ -234,34 +235,35 @@ export function TicketModal({ isOpen, onClose, data }: TicketModalProps) {
       {/* Línea divisoria sólida para agujas de impacto */}
       <div className="border-b-2 border-black my-1.5"></div>
 
-      {/* Datos del Documento y Fecha */}
-      <div className="flex justify-between items-center text-[1em] text-black">
-        <span className="font-black uppercase">{title}</span>
-        <span className="text-[0.9em] font-bold font-mono">{data.date}</span>
+      {/* Datos del Documento y Fecha (salto de línea si no entra horizontalmente) */}
+      <div className="flex flex-wrap justify-between items-baseline gap-x-1 text-[1em] text-black">
+        <span className="font-black uppercase break-words [overflow-wrap:anywhere]">{title}</span>
+        <span className="text-[0.9em] font-bold font-mono whitespace-nowrap ml-auto">{data.date}</span>
       </div>
 
       <div className="border-b-2 border-black my-1.5"></div>
 
-      {/* Datos del Cliente y Vehículo */}
-      <div className="space-y-0.5 text-[0.95em] text-black">
-        <div className="truncate">
+      {/* Datos del Cliente y Vehículo (salto de renglón garantizado) */}
+      <div className="space-y-1 text-[0.95em] text-black">
+        <div className="break-words [overflow-wrap:anywhere] whitespace-normal leading-snug">
           <span className="font-black">CLIENTE:</span> {data.customerName || "Consumidor Final"}
         </div>
         {data.customerPhone && (
-          <div>
+          <div className="break-words [overflow-wrap:anywhere] whitespace-normal">
             <span className="font-black">TEL:</span> {data.customerPhone}
           </div>
         )}
         {data.plate && (
-          <div className="truncate">
+          <div className="break-words [overflow-wrap:anywhere] whitespace-normal leading-snug">
             <span className="font-black">MOTO/PLACA:</span> {data.plate}{" "}
             {data.motoModel ? `(${data.motoModel})` : ""}
           </div>
         )}
         {data.paymentType && (
-          <div>
-            <span className="font-black">PAGO:</span> {data.paymentType}
-            {isCreditSale && <b className="ml-1 text-black underline">(CRÉDITO)</b>}
+          <div className="break-words [overflow-wrap:anywhere] whitespace-normal flex flex-wrap items-center gap-x-1">
+            <span className="font-black">PAGO:</span>
+            <span>{data.paymentType}</span>
+            {isCreditSale && <b className="text-black underline font-black">(CRÉDITO)</b>}
           </div>
         )}
       </div>
@@ -271,35 +273,35 @@ export function TicketModal({ isOpen, onClose, data }: TicketModalProps) {
       {/* CASO 1: TICKET DE ABONO A CRÉDITO */}
       {isAbono && data.creditInfo ? (
         <div className="space-y-1 py-0.5 text-[0.95em] text-black">
-          <div className="font-black text-center text-[1em] border-b-2 border-black pb-0.5">
+          <div className="font-black text-center text-[1em] border-b-2 border-black pb-0.5 break-words">
             DETALLE DEL ABONO
           </div>
-          <div className="flex justify-between">
+          <div className="flex flex-wrap justify-between gap-x-1">
             <span className="font-bold">Crédito Ref:</span>
-            <span className="font-black">#CRE-{data.creditInfo.creditConsecutive}</span>
+            <span className="font-black break-words">#CRE-{data.creditInfo.creditConsecutive}</span>
           </div>
-          <div className="flex justify-between">
+          <div className="flex flex-wrap justify-between gap-x-1">
             <span className="font-bold">Total Inicial:</span>
-            <span className="font-bold">${data.creditInfo.totalDebt.toLocaleString("es-CO")}</span>
+            <span className="font-bold font-mono">${data.creditInfo.totalDebt.toLocaleString("es-CO")}</span>
           </div>
-          <div className="flex justify-between">
+          <div className="flex flex-wrap justify-between gap-x-1">
             <span className="font-bold">Saldo Anterior:</span>
-            <span className="font-bold">${data.creditInfo.previousBalance.toLocaleString("es-CO")}</span>
+            <span className="font-bold font-mono">${data.creditInfo.previousBalance.toLocaleString("es-CO")}</span>
           </div>
-          <div className="flex justify-between font-black text-[1.05em] border-t-2 border-b-2 border-black py-1 my-1">
+          <div className="flex flex-wrap justify-between font-black text-[1.05em] border-t-2 border-b-2 border-black py-1 my-1 gap-x-1">
             <span>VALOR ABONADO:</span>
-            <span>${data.creditInfo.amountPaid.toLocaleString("es-CO")}</span>
+            <span className="font-mono ml-auto">${data.creditInfo.amountPaid.toLocaleString("es-CO")}</span>
           </div>
-          <div className="flex justify-between font-black text-[1.1em] pt-0.5">
+          <div className="flex flex-wrap justify-between font-black text-[1.1em] pt-0.5 gap-x-1">
             <span>NUEVO SALDO:</span>
-            <span>
+            <span className="font-mono ml-auto break-words">
               {data.creditInfo.newBalance === 0
                 ? "*** PAZ Y SALVO ***"
                 : `$${data.creditInfo.newBalance.toLocaleString("es-CO")}`}
             </span>
           </div>
           {data.creditInfo.receivedBy && (
-            <div className="text-[0.85em] font-bold text-right pt-0.5">
+            <div className="text-[0.85em] font-bold text-right pt-0.5 break-words whitespace-normal">
               Atendido por: {data.creditInfo.receivedBy}
             </div>
           )}
@@ -307,7 +309,7 @@ export function TicketModal({ isOpen, onClose, data }: TicketModalProps) {
       ) : (
         /* CASO 2: VENTA / COTIZACIÓN CON ARTÍCULOS */
         <>
-          {/* Tabla de Artículos: 50% descripción, 16% cant, 34% total (calibrada para 7.5cm) */}
+          {/* Tabla de Artículos: 50% descripción (con salto de línea), 16% cant, 34% total */}
           <div className="w-full text-black">
             <div className="flex justify-between font-black border-b-2 border-black pb-1 mb-1 text-[0.95em]">
               <span className="w-[50%] text-left">DESCRIPCIÓN</span>
@@ -315,17 +317,24 @@ export function TicketModal({ isOpen, onClose, data }: TicketModalProps) {
               <span className="w-[34%] text-right">TOTAL</span>
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               {(data.items || []).map((item, idx) => (
-                <div key={idx} className="flex justify-between items-start leading-tight text-black">
-                  <div className="w-[50%] pr-1">
-                    <div className="font-bold break-words leading-tight">{item.name}</div>
-                    <div className="text-[0.85em] font-bold font-mono text-black">
+                <div key={idx} className="flex justify-between items-start leading-tight text-black border-b border-black/10 pb-0.5">
+                  {/* Descripción con salto de línea garantizado si el texto es largo */}
+                  <div className="w-[50%] pr-1 break-words [overflow-wrap:anywhere] [word-break:break-word]">
+                    <div className="font-bold break-words [overflow-wrap:anywhere] [word-break:break-word] whitespace-normal leading-snug">
+                      {item.name}
+                    </div>
+                    <div className="text-[0.85em] font-bold font-mono text-black whitespace-normal break-words">
                       ${item.unitPrice.toLocaleString("es-CO")} c/u
                     </div>
                   </div>
-                  <div className="w-[16%] text-center font-bold font-mono">{item.quantity}</div>
-                  <div className="w-[34%] text-right font-black font-mono">
+                  {/* Cantidad centrada y fijada sin encogerse */}
+                  <div className="w-[16%] text-center font-bold font-mono shrink-0 pt-0.5">
+                    {item.quantity}
+                  </div>
+                  {/* Total alineado a la derecha sin recortarse */}
+                  <div className="w-[34%] text-right font-black font-mono shrink-0 break-words [overflow-wrap:anywhere] pt-0.5">
                     ${item.total.toLocaleString("es-CO")}
                   </div>
                 </div>
@@ -335,10 +344,12 @@ export function TicketModal({ isOpen, onClose, data }: TicketModalProps) {
 
           <div className="border-b-2 border-black my-1.5"></div>
 
-          {/* Total General */}
-          <div className="flex justify-between font-black text-[1.15em] border-t-2 border-b-2 border-black py-1 my-1 text-black">
-            <span>TOTAL A PAGAR:</span>
-            <span>${data.total.toLocaleString("es-CO")}</span>
+          {/* Total General con salto de renglón si es necesario */}
+          <div className="flex flex-wrap justify-between items-center font-black text-[1.15em] border-t-2 border-b-2 border-black py-1 my-1.5 text-black gap-x-1">
+            <span className="break-words [overflow-wrap:anywhere]">TOTAL A PAGAR:</span>
+            <span className="font-mono ml-auto break-words [overflow-wrap:anywhere]">
+              ${data.total.toLocaleString("es-CO")}
+            </span>
           </div>
         </>
       )}
@@ -352,18 +363,18 @@ export function TicketModal({ isOpen, onClose, data }: TicketModalProps) {
             <div className="border-t-2 border-black w-36 mx-auto pt-1 font-black">
               Firma del Cliente
             </div>
-            <div className="text-[0.8em] font-bold">Acepto y reconozco la deuda</div>
+            <div className="text-[0.8em] font-bold break-words">Acepto y reconozco la deuda</div>
           </div>
         </div>
       )}
 
-      {/* Pie de Página */}
-      <div className="text-center text-[0.9em] font-bold space-y-0.5 pt-1 text-black">
-        <div>
+      {/* Pie de Página con salto de renglón */}
+      <div className="text-center text-[0.9em] font-bold space-y-0.5 pt-1 text-black break-words [overflow-wrap:anywhere] whitespace-normal">
+        <div className="break-words [overflow-wrap:anywhere] whitespace-normal leading-snug">
           {data.workshopConfig.receiptMessage || "¡Gracias por su compra! Vuelva pronto."}
         </div>
         {isQuote && (
-          <div className="italic text-[0.8em]">
+          <div className="italic text-[0.8em] break-words [overflow-wrap:anywhere]">
             * Cotización informativa sujeta a disponibilidad de stock.
           </div>
         )}
@@ -378,6 +389,7 @@ export function TicketModal({ isOpen, onClose, data }: TicketModalProps) {
         - Margen Izquierdo: 5mm (evita el punto ciego mecánico del cabezal tractor)
         - Ancho: 66mm (cubre el rollo de 75mm sin dejar la franja blanca a la derecha)
         - Font Size: 11.5px / 12.5px en negrita pura (legible en agujas de impacto y cinta entintada)
+        - Salto de línea forzado en CSS: word-break: break-word; overflow-wrap: anywhere;
         - @page margin 0: Cero espacios en blanco arriba y abajo
       */}
       <style jsx global>{`
@@ -430,11 +442,16 @@ export function TicketModal({ isOpen, onClose, data }: TicketModalProps) {
             font-family: 'Courier New', Courier, 'Lucida Console', monospace !important;
             line-height: 1.25 !important;
             overflow: visible !important;
+            word-break: break-word !important;
+            overflow-wrap: anywhere !important;
+            white-space: normal !important;
           }
 
           #pos-print-portal * {
             box-sizing: border-box !important;
             color: #000000 !important;
+            word-break: break-word !important;
+            overflow-wrap: anywhere !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
@@ -592,7 +609,7 @@ export function TicketModal({ isOpen, onClose, data }: TicketModalProps) {
                   <div className="flex items-start gap-1.5 text-[10px] text-[#34D399] bg-[#34D399]/10 p-2 rounded-lg border border-[#34D399]/20">
                     <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                     <span>
-                      <b>Calibrado para Epson TM-U220 (Rollo 7.5 cm):</b> Ancho 66mm llena el papel sin franja derecha, Margen 5mm evita corte a la izquierda, y Letra 11.5px/12.5px en negrita pura garantiza máxima nitidez en cinta de impacto.
+                      <b>Salto de Línea Inteligente:</b> Si ajustas el ancho o aumentas la letra, el texto largo salta automáticamente de renglón sin recortarse ni perderse a la derecha. Todo se lee completo y en orden.
                     </span>
                   </div>
                 </div>
@@ -600,7 +617,7 @@ export function TicketModal({ isOpen, onClose, data }: TicketModalProps) {
             </div>
           </div>
 
-          {/* Papel Simulado en Pantalla (refleja en vivo ancho y tamaño de letra) */}
+          {/* Papel Simulado en Pantalla (refleja en vivo ancho, tamaño de letra y salto de renglón) */}
           <div
             className="bg-white text-black p-3.5 rounded-lg shadow-2xl font-mono leading-tight mx-auto border border-gray-400 select-text transition-all"
             style={{
@@ -608,6 +625,9 @@ export function TicketModal({ isOpen, onClose, data }: TicketModalProps) {
               width: customWidth,
               maxWidth: "100%",
               fontSize: customFontSize,
+              wordBreak: "break-word",
+              overflowWrap: "anywhere",
+              whiteSpace: "normal",
             }}
           >
             {renderTicketBody()}
