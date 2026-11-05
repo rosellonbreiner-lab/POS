@@ -44,6 +44,11 @@ WhatsApp*
 /backups/
 *.motobackup
 
+# Certificados SSL locales
+certificates/
+*.crt
+*.key
+
 # Base de datos SQLite local (No subir base de datos local con datos de prueba)
 *.db
 *.db-journal

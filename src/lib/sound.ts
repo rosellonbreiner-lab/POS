@@ -36,3 +36,4 @@ export function playScanBeep(success: boolean = true) {
     // Si el navegador tiene políticas de audio restringidas sin interacción
   }
 }
+

@@ -5,7 +5,7 @@ import { Lock, Mail, ShieldAlert, ArrowRight, Layers, Sparkles, ExternalLink } f
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { SystemDashboardAnime } from "./SystemDashboardAnime";
-import { ExecutiveAvatar } from "./ExecutiveAvatar";
+import { LoginSecurityBadge } from "./LoginSecurityBadge";
 
 interface LoginPageProps {
   onLoginSuccess: (user: any) => void;
@@ -136,13 +136,11 @@ export function LoginForm({ onLoginSuccess }: LoginPageProps) {
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#1F3A5F] via-[#5AA9E6] to-[#1F3A5F]"></div>
 
             <div className="text-center mb-5">
-              {/* Muñequito Ejecutivo Interactivo: Sigue el mouse y se tapa los ojos al escribir contraseña */}
-              <div className="mb-2">
-                <ExecutiveAvatar
-                  isCoveringEyes={isPasswordFocused}
-                  isTypingEmail={isEmailFocused}
-                />
-              </div>
+              {/* Emblema de Seguridad POS Dinámico */}
+              <LoginSecurityBadge
+                isPasswordFocused={isPasswordFocused}
+                isEmailFocused={isEmailFocused}
+              />
               <h3 className="text-xl font-bold text-[#EAF4F4]">
                 Acceso al Sistema
               </h3>

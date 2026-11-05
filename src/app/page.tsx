@@ -1491,24 +1491,8 @@ export default function DashboardPage() {
           </nav>
         </div>
 
-        {/* Sección inferior del Sidebar: Créditos de Autor y Perfil */}
+        {/* Sección inferior del Sidebar: Perfil */}
         <div className="space-y-2">
-          {/* Botón By Breiner Rosellon si está activo desde Superadmin */}
-          {workshopConfig?.authorCredit?.enabled !== false && (
-            <div className="pt-2 pb-1 border-t border-white/[0.06] flex justify-center">
-              <a
-                href={workshopConfig?.authorCredit?.url || "https://github.com/rosellonbreiner-lab/POS"}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#1F3A5F]/70 hover:bg-[#1F3A5F] border border-[#5AA9E6]/40 hover:border-[#5AA9E6] text-[#5AA9E6] hover:text-white text-[10px] font-semibold transition-all hover:scale-105 group"
-                title="Desarrollado por Breiner Rosellon"
-              >
-                <Sparkles className="w-3 h-3 text-[#5AA9E6] group-hover:rotate-12 transition-transform" />
-                <span>{workshopConfig?.authorCredit?.text || "By Breiner Rosellon"}</span>
-                <ExternalLink className="w-2.5 h-2.5 opacity-70 group-hover:opacity-100" />
-              </a>
-            </div>
-          )}
 
           {/* Perfil del usuario activo y Salir */}
           <div className="pt-2 border-t border-white/[0.08] flex items-center justify-between">

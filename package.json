@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -H 0.0.0.0",
+    "dev": "next dev --experimental-https --experimental-https-key ./certificates/server.key --experimental-https-cert ./certificates/server.crt -H 0.0.0.0",
+    "dev:http": "next dev -H 0.0.0.0",
     "build": "prisma generate && next build",
     "start": "next start -H 0.0.0.0",
     "postinstall": "prisma generate",
@@ -34,9 +35,11 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/recharts": "^1.8.29",
+    "@types/selfsigned": "^2.0.4",
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
     "prisma": "^6.6.0",
+    "selfsigned": "^5.5.0",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5"
