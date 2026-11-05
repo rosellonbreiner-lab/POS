@@ -940,7 +940,7 @@ export default function DashboardPage() {
     {
       title: "Ventas de Hoy",
       value: `$${filteredInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0).toLocaleString("es-CO")} COP`,
-      change: `${filteredInvoices.length} facturas`,
+      change: filteredInvoices.length === 1 ? "1 factura" : `${filteredInvoices.length} facturas`,
       isUp: true,
       icon: ShoppingCart,
     },
@@ -1748,7 +1748,6 @@ export default function DashboardPage() {
                       <Badge variant={kpi.isUp ? "success" : "warning"}>
                         {kpi.change}
                       </Badge>
-                      <span className="text-[#9CA3AF]">en base de datos</span>
                     </div>
                   </Card>
                 ))}
