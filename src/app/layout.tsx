@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google";
+import { PwaInstallPrompt } from "@/components/common/PwaInstallPrompt";
 import "./globals.css";
 
 const inter = Inter({
@@ -24,11 +25,22 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
+  themeColor: "#1F3A5F",
 };
 
 export const metadata: Metadata = {
   title: "Sistema de Gestión Comercial & POS",
   description: "Plataforma web integral para control de inventario, punto de venta (POS), cotizaciones, flujo de caja y facturación multinegocio.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "POS Gestión",
+  },
+  icons: {
+    icon: "/icon-192.png",
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({
@@ -40,6 +52,7 @@ export default function RootLayout({
     <html lang="es" className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}>
       <body className="antialiased selection:bg-[#5AA9E6]/30 selection:text-[#5AA9E6]">
         {children}
+        <PwaInstallPrompt />
       </body>
     </html>
   );

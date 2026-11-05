@@ -36,6 +36,8 @@ import {
   Send,
   PackageCheck,
   ArrowRight,
+  Smartphone,
+  Download,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -1393,6 +1395,23 @@ export default function DashboardPage() {
                   );
                 })}
               </nav>
+
+              {/* Botón de Instalación PWA en Móvil */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  localStorage.removeItem("pos_pwa_dismissed");
+                  window.dispatchEvent(new Event("beforeinstallprompt"));
+                }}
+                className="w-full mt-2 flex items-center justify-between px-3 py-2 rounded-xl bg-gradient-to-r from-[#1F3A5F]/70 to-[#5AA9E6]/20 border border-[#5AA9E6]/40 text-[#5AA9E6] hover:text-white text-xs font-bold transition-all cursor-pointer shadow-md shadow-[#1F3A5F]/30"
+              >
+                <div className="flex items-center gap-2">
+                  <Smartphone className="w-4 h-4 text-[#5AA9E6]" />
+                  <span>Instalar App en Celular</span>
+                </div>
+                <Download className="w-3.5 h-3.5" />
+              </button>
             </div>
 
             {/* Perfil en Móvil */}
