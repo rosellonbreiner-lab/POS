@@ -25,9 +25,17 @@ export interface InvoicePrintData {
  */
 export function Receipt80mm({ data }: { data: InvoicePrintData }) {
   return (
-    <div className="receipt-80mm hidden print:block text-black bg-white p-2 font-mono text-xs max-w-[80mm] mx-auto leading-tight">
+    <div className="receipt-80mm hidden print:block text-black bg-white p-1 font-mono text-[10px] max-w-[66mm] mx-auto leading-tight">
       <style jsx global>{`
+        @page {
+          margin: 0 !important;
+          size: auto;
+        }
         @media print {
+          @page {
+            margin: 0 !important;
+            size: auto;
+          }
           body * {
             visibility: hidden;
           }
@@ -38,7 +46,10 @@ export function Receipt80mm({ data }: { data: InvoicePrintData }) {
             position: absolute;
             left: 0;
             top: 0;
-            width: 80mm;
+            width: 66mm !important;
+            max-width: 66mm !important;
+            padding: 1mm !important;
+            box-sizing: border-box !important;
           }
         }
       `}</style>

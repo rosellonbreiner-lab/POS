@@ -213,3 +213,34 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(90, 169, 230, 0.45);
 }
+
+/* ==============================================================
+   REGLAS GLOBALES DE IMPRESIÓN (SIN ENCABEZADOS DE PÁGINA)
+   Elimina encabezados del navegador (URL, fecha, título) y
+   márgenes excesivos en rollos térmicos y matriciales (Epson)
+   ============================================================== */
+@page {
+  margin: 0 !important;
+  size: auto;
+}
+
+@media print {
+  @page {
+    margin: 0 !important;
+    size: auto;
+  }
+
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    width: 100% !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
