@@ -43,6 +43,8 @@ WhatsApp*
 /backup/
 /backups/
 *.motobackup
+workshop-settings.backup.json
+*.tmp
 
 # Certificados SSL locales
 certificates/

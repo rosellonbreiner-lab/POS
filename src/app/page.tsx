@@ -299,7 +299,9 @@ export default function DashboardPage() {
   // Actualizar el título de la pestaña del navegador con el nombre de la empresa activa
   useEffect(() => {
     if (typeof window !== "undefined") {
-      if (selectedCompanyId === "ALL") {
+      if (!user) {
+        document.title = "Acceso al Sistema · Sistema de Gestión Comercial & POS";
+      } else if (selectedCompanyId === "ALL") {
         document.title = "Todas las Empresas · Sistema POS";
       } else if (activeCompany?.name) {
         document.title = `${activeCompany.name} · Sistema de Gestión POS`;
@@ -307,7 +309,7 @@ export default function DashboardPage() {
         document.title = "Sistema de Gestión Comercial & POS";
       }
     }
-  }, [activeCompany?.name, selectedCompanyId]);
+  }, [user, activeCompany?.name, selectedCompanyId]);
 
   // Aislamiento Multi-Empresa: Filtrado de datos por empresa activa
   const filteredInvoices = useMemo(() => {

@@ -144,7 +144,7 @@ Para que los navegadores móviles (Chrome en Android y Safari en iOS) permitan e
 
 ---
 
-## 💻 Puesta en Marcha (Desarrollo y Producción)
+## 💻 Puesta en Marcha & Actualizaciones Seguras
 
 ```bash
 # 1. Instalar dependencias
@@ -165,6 +165,24 @@ npx tsc --noEmit
 # 6. Compilación para producción
 npm run build
 npm run start
+```
+
+### 🛡️ Actualización Continua Sin Pérdida de Datos (Zero-Data-Loss)
+
+Para instalar futuras actualizaciones o cambios de funcionalidad manteniendo el 100% de los datos guardados en SQLite y la configuración multi-empresa:
+
+```bash
+# Actualización Segura Integral (Snapshot + Prisma Push sin pérdida + WAL + Verificación)
+npm run update:safe
+
+# Copia de Seguridad Instantánea
+npm run db:backup
+
+# Restauración de la Última Copia Verificada
+npm run db:restore
+
+# Chequeo de Integridad y Recuento de Registros
+npm run db:verify
 ```
 
 ---

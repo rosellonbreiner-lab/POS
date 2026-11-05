@@ -34,6 +34,10 @@ export function LoginForm({ onLoginSuccess }: LoginPageProps) {
   });
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      document.title = "Acceso al Sistema · Sistema de Gestión Comercial & POS";
+    }
+
     fetch("/api/settings")
       .then((res) => res.json())
       .then((data) => {

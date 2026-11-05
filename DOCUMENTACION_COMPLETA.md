@@ -264,5 +264,44 @@ Define los metadatos necesarios para que los motores Chromium (Android, Chrome, 
 
 ---
 
+## 6. Arquitectura de Actualizaciones Seguras & Cero Pérdida de Datos (Zero-Data-Loss)
+
+Para garantizar que el software pueda recibir nuevas funcionalidades y actualizaciones continuas sin poner en riesgo la información comercial, el sistema incorpora un pipeline automatizado de persistencia:
+
+### Comandos de Mantenimiento & Actualización
+
+| Comando | Acción Realizada |
+| :--- | :--- |
+| `npm run update:safe` | **Actualización Segura**: Crea snapshot previo de DB y configuración, verifica integridad, sincroniza el esquema Prisma con `--accept-data-loss=false`, activa modo WAL y reporta registros conservados. |
+| `npm run db:backup` | **Snapshot Instantáneo**: Genera una copia exacta de `dev.db`, `dev.db-wal`, `workshop-settings.json` con hash criptográfico SHA-256 en `backups/persistence/`. |
+| `npm run db:restore` | **Restauración Automática**: Revierte la base de datos y la configuración al último punto de restauración verificado. |
+| `npm run db:verify` | **Auditoría de Integridad**: Ejecuta `PRAGMA integrity_check`, comprueba el modo WAL y reporta el recuento exacto de usuarios, productos, facturas y clientes. |
+
+### Mecanismos de Protección de Datos
+
+1. **Sincronización no destructiva (`--accept-data-loss=false`)**:
+   Prisma DB Push aborta de inmediato si cualquier cambio implicara la pérdida de columnas o tablas con información existente.
+2. **SQLite en modo WAL (Write-Ahead Logging)**:
+   Garantiza concurrencia de lecturas y escrituras sin bloqueos de tabla y protege la base de datos contra corrupción ante apagones o caídas de tensión inesperadas.
+3. **Doble Capa de Tolerancia a Fallos para Configuración (`workshop-settings.json`)**:
+   - Escritura atómica a través de archivo temporal `.tmp` con reemplazo seguro.
+   - Espejo redundante (`workshop-settings.backup.json`): Si el archivo primario se corrompe o borra accidentalmente, el sistema lo reconstruye de forma transparente desde el espejo.
+
+---
+
+## 7. Personalización de Logotipos Multi-Empresa
+
+Cada negocio registrado en el sistema dispone de identidad visual propia:
+- **Carga de Imagen Individual**: Tanto en la creación como en la edición de cualquier empresa, el usuario puede subir el logotipo o emblema del negocio (formatos PNG, JPG, WebP o SVG).
+- **Despliegue Global**: El logotipo de la empresa activa se refleja automáticamente en:
+  - La barra lateral (Sidebar de escritorio).
+  - El encabezado de navegación móvil (Drawer).
+  - La tarjeta informativa dentro de la Configuración.
+  - El encabezado de los **Tickets Térmicos POS** de 80mm y 58mm.
+- **Pestaña de Navegador Neutral en Login**: Durante la pantalla de autenticación, la pestaña del navegador despliega un título institucional neutro:  
+  `Acceso al Sistema · Sistema de Gestión Comercial & POS`, adaptándose de forma dinámica al negocio activo una vez iniciado sesión.
+
+---
+
 © 2026 **Breiner Rosellon** — Todos los derechos reservados.
 

@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 
 const SETTINGS_FILE = path.join(process.cwd(), "workshop-settings.json");
+const BACKUP_SETTINGS_FILE = path.join(process.cwd(), "workshop-settings.backup.json");
 
 export interface Company {
   id: string;
@@ -133,10 +134,48 @@ export const defaultSettings = {
 };
 
 export function getSettings() {
+  let rawData: string | null = null;
+  let usedBackup = false;
+
   try {
     if (fs.existsSync(SETTINGS_FILE)) {
-      const data = fs.readFileSync(SETTINGS_FILE, "utf-8");
-      const parsed = JSON.parse(data);
+      rawData = fs.readFileSync(SETTINGS_FILE, "utf-8");
+    }
+  } catch (e) {
+    console.error("Error reading primary settings file:", e);
+  }
+
+  // Si el archivo principal no existe o falló, intentar recuperar desde el espejo de respaldo
+  if (!rawData || !rawData.trim()) {
+    try {
+      if (fs.existsSync(BACKUP_SETTINGS_FILE)) {
+        rawData = fs.readFileSync(BACKUP_SETTINGS_FILE, "utf-8");
+        usedBackup = true;
+        console.warn("[SETTINGS PERSISTENCE] Archivo principal no disponible. Restaurando configuración desde espejo de respaldo...");
+      }
+    } catch (e) {
+      console.error("Error reading mirror backup settings file:", e);
+    }
+  }
+
+  try {
+    if (rawData) {
+      const parsed = JSON.parse(rawData);
+
+      // Si usamos el backup para revivir, resincronizar el archivo principal
+      if (usedBackup) {
+        try {
+          fs.writeFileSync(SETTINGS_FILE, JSON.stringify(parsed, null, 2), "utf-8");
+        } catch (_) {}
+      } else {
+        // Mantener el espejo al día silenciosamente
+        try {
+          if (!fs.existsSync(BACKUP_SETTINGS_FILE)) {
+            fs.writeFileSync(BACKUP_SETTINGS_FILE, rawData, "utf-8");
+          }
+        } catch (_) {}
+      }
+
       return {
         ...defaultSettings,
         ...parsed,
@@ -184,14 +223,22 @@ export function getSettings() {
       };
     }
   } catch (e) {
-    console.error("Error reading settings file:", e);
+    console.error("Error parsing settings data:", e);
   }
   return defaultSettings;
 }
 
 export function saveSettings(settings: any) {
   try {
-    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), "utf-8");
+    const payload = JSON.stringify(settings, null, 2);
+    const tempFile = `${SETTINGS_FILE}.tmp`;
+
+    // 1. Escritura atómica para evitar archivos corruptos en caídas de energía
+    fs.writeFileSync(tempFile, payload, "utf-8");
+    fs.renameSync(tempFile, SETTINGS_FILE);
+
+    // 2. Espejo de respaldo persistente inmediato
+    fs.writeFileSync(BACKUP_SETTINGS_FILE, payload, "utf-8");
   } catch (e) {
     console.error("Error saving settings file:", e);
   }

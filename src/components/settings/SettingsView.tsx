@@ -80,6 +80,7 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
     nit: "",
     phone: "",
     address: "",
+    logoUrl: "",
     receiptMessage: "¡Gracias por su compra! Vuelva pronto.",
     primaryColor: "#5AA9E6",
     secondaryColor: "#1F3A5F",
@@ -399,6 +400,40 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
     reader.readAsDataURL(file);
   };
 
+  const handleNewCompanyLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      setMsg({ type: "error", text: "La imagen no debe superar los 2MB de tamaño." });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setNewCompanyData((prev) => ({ ...prev, logoUrl: base64String }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleEditCompanyLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      setMsg({ type: "error", text: "La imagen no debe superar los 2MB de tamaño." });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setCompanyToEdit((prev: any) => ({ ...prev, logoUrl: base64String }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSaveWorkshop = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -411,7 +446,7 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      setMsg({ type: "success", text: "¡Datos del taller guardados exitosamente!" });
+      setMsg({ type: "success", text: "¡Datos comerciales guardados exitosamente!" });
       if (onRefreshGlobal) onRefreshGlobal();
     } catch (err: any) {
       setMsg({ type: "error", text: err.message || "Error al guardar configuración" });
@@ -508,6 +543,7 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
         nit: "",
         phone: "",
         address: "",
+        logoUrl: "",
         receiptMessage: "¡Gracias por su compra! Vuelva pronto.",
         primaryColor: "#5AA9E6",
         secondaryColor: "#1F3A5F",
@@ -962,13 +998,21 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
                       <div className="space-y-2">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-2.5">
-                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
-                              isWorkshop
-                                ? "bg-[#5AA9E6]/15 border-[#5AA9E6]/30 text-[#5AA9E6]"
-                                : "bg-[#34D399]/15 border-[#34D399]/30 text-[#34D399]"
-                            }`}>
-                              {isWorkshop ? <Wrench className="w-4 h-4" /> : <Store className="w-4 h-4" />}
-                            </div>
+                            {comp.logoUrl ? (
+                              <img
+                                src={comp.logoUrl}
+                                alt={comp.name}
+                                className="w-9 h-9 rounded-xl object-contain bg-white/5 border border-white/20 p-0.5 shrink-0 shadow-sm"
+                              />
+                            ) : (
+                              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
+                                isWorkshop
+                                  ? "bg-[#5AA9E6]/15 border-[#5AA9E6]/30 text-[#5AA9E6]"
+                                  : "bg-[#34D399]/15 border-[#34D399]/30 text-[#34D399]"
+                              }`}>
+                                {isWorkshop ? <Wrench className="w-4 h-4" /> : <Store className="w-4 h-4" />}
+                              </div>
+                            )}
                             <div>
                               <h4 className="font-bold text-sm text-white">{comp.name}</h4>
                               <p className="text-[11px] text-[#94A3B8] line-clamp-1">
@@ -1170,7 +1214,7 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Settings className="w-4 h-4 text-[#5AA9E6]" />
-                  Información Comercial del Taller
+                  Información Comercial de la Empresa / Negocio
                 </CardTitle>
                 <CardDescription className="text-xs">
                   Estos datos se reflejan en el sistema, facturas electrónicas y tickets impresos para los clientes.
@@ -1181,7 +1225,7 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <label className="text-xs font-semibold text-[#94A3B8] block">
-                        Nombre del Taller / Negocio
+                        Nombre de la Empresa / Negocio
                       </label>
                       <Input
                         value={config.name}
@@ -1267,13 +1311,13 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
             </Card>
           </div>
 
-          {/* Columna Derecha: Logotipo del Taller & Vista Previa */}
+          {/* Columna Derecha: Logotipo de la Empresa & Vista Previa */}
           <div className="space-y-4">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Image className="w-4 h-4 text-[#5AA9E6]" />
-                  Logotipo del Taller
+                  Logotipo de la Empresa / Negocio
                 </CardTitle>
                 <CardDescription className="text-xs">
                   Foto o logo que aparecerá en el menú lateral y en los comprobantes.
@@ -2847,6 +2891,74 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
                 />
               </div>
 
+              {/* Logotipo de la Empresa / Negocio */}
+              <div className="space-y-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-white flex items-center gap-1.5">
+                    <Image className="w-3.5 h-3.5 text-[#5AA9E6]" />
+                    Logotipo de la Empresa / Negocio
+                  </label>
+                  {newCompanyData.logoUrl && (
+                    <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" /> Logo cargado
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-[#94A3B8]">
+                  Foto o logo personalizado que se mostrará en el menú lateral, barra de navegación y tickets térmicos de esta empresa.
+                </p>
+
+                {newCompanyData.logoUrl ? (
+                  <div className="flex items-center gap-3 pt-1">
+                    <img
+                      src={newCompanyData.logoUrl}
+                      alt="Logo de la empresa"
+                      className="w-14 h-14 rounded-xl object-contain bg-white/10 p-1 border border-white/20 shadow-md shrink-0"
+                    />
+                    <div className="flex-1 space-y-1.5">
+                      <p className="text-xs text-white font-medium">Logotipo asignado correctamente</p>
+                      <div className="flex items-center gap-2">
+                        <label className="px-2.5 py-1 rounded-lg bg-[#5AA9E6]/20 hover:bg-[#5AA9E6]/30 text-xs text-[#5AA9E6] border border-[#5AA9E6]/40 cursor-pointer transition-colors font-medium">
+                          Cambiar Logo
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleNewCompanyLogoUpload}
+                            className="hidden"
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setNewCompanyData({ ...newCompanyData, logoUrl: "" })}
+                          className="px-2.5 py-1 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-xs text-red-400 border border-red-500/30 transition-colors cursor-pointer"
+                        >
+                          Quitar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between p-2.5 rounded-lg border border-dashed border-white/20 bg-black/20">
+                    <div className="flex items-center gap-2.5 text-xs text-[#94A3B8]">
+                      <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-[#5AA9E6] shrink-0">
+                        <Upload className="w-4 h-4" />
+                      </div>
+                      <span className="text-[11px]">Sin logo personalizado (usará el ícono comercial)</span>
+                    </div>
+                    <label className="px-3 py-1.5 rounded-lg bg-[#5AA9E6]/20 hover:bg-[#5AA9E6]/30 border border-[#5AA9E6]/40 text-xs font-semibold text-[#5AA9E6] cursor-pointer transition-colors flex items-center gap-1.5 shrink-0">
+                      <Upload className="w-3.5 h-3.5" />
+                      Subir Logo
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleNewCompanyLogoUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
+
               {/* Selector de Paleta de Colores de la Marca */}
               <div className="space-y-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.08]">
                 <div className="flex items-center justify-between">
@@ -3044,6 +3156,74 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
                   onChange={(e) => setCompanyToEdit({ ...companyToEdit, receiptMessage: e.target.value })}
                   className="h-8 text-xs"
                 />
+              </div>
+
+              {/* Logotipo de la Empresa / Negocio */}
+              <div className="space-y-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-white flex items-center gap-1.5">
+                    <Image className="w-3.5 h-3.5 text-[#5AA9E6]" />
+                    Logotipo de la Empresa / Negocio
+                  </label>
+                  {companyToEdit.logoUrl && (
+                    <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" /> Logo cargado
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-[#94A3B8]">
+                  Foto o logo personalizado que se mostrará en el menú lateral, barra de navegación y tickets térmicos de esta empresa.
+                </p>
+
+                {companyToEdit.logoUrl ? (
+                  <div className="flex items-center gap-3 pt-1">
+                    <img
+                      src={companyToEdit.logoUrl}
+                      alt="Logo de la empresa"
+                      className="w-14 h-14 rounded-xl object-contain bg-white/10 p-1 border border-white/20 shadow-md shrink-0"
+                    />
+                    <div className="flex-1 space-y-1.5">
+                      <p className="text-xs text-white font-medium">Logotipo asignado correctamente</p>
+                      <div className="flex items-center gap-2">
+                        <label className="px-2.5 py-1 rounded-lg bg-[#5AA9E6]/20 hover:bg-[#5AA9E6]/30 text-xs text-[#5AA9E6] border border-[#5AA9E6]/40 cursor-pointer transition-colors font-medium">
+                          Cambiar Logo
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleEditCompanyLogoUpload}
+                            className="hidden"
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setCompanyToEdit({ ...companyToEdit, logoUrl: "" })}
+                          className="px-2.5 py-1 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-xs text-red-400 border border-red-500/30 transition-colors cursor-pointer"
+                        >
+                          Quitar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between p-2.5 rounded-lg border border-dashed border-white/20 bg-black/20">
+                    <div className="flex items-center gap-2.5 text-xs text-[#94A3B8]">
+                      <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-[#5AA9E6] shrink-0">
+                        <Upload className="w-4 h-4" />
+                      </div>
+                      <span className="text-[11px]">Sin logo personalizado (usará el ícono comercial)</span>
+                    </div>
+                    <label className="px-3 py-1.5 rounded-lg bg-[#5AA9E6]/20 hover:bg-[#5AA9E6]/30 border border-[#5AA9E6]/40 text-xs font-semibold text-[#5AA9E6] cursor-pointer transition-colors flex items-center gap-1.5 shrink-0">
+                      <Upload className="w-3.5 h-3.5" />
+                      Subir Logo
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleEditCompanyLogoUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                )}
               </div>
 
               {/* Selector de Paleta de Colores de la Marca (Editar) */}
