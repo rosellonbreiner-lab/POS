@@ -84,6 +84,12 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
     receiptMessage: "¡Gracias por su compra! Vuelva pronto.",
     primaryColor: "#5AA9E6",
     secondaryColor: "#1F3A5F",
+    printConfig: {
+      paperFormat: "TM_U220",
+      printWidth: "66mm",
+      marginLeft: "5mm",
+      fontSize: "11.5px",
+    },
   });
 
   // Créditos de autor By Breiner Rosellon (Hipervínculo activable desde Superadmin)
@@ -547,6 +553,12 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
         receiptMessage: "¡Gracias por su compra! Vuelva pronto.",
         primaryColor: "#5AA9E6",
         secondaryColor: "#1F3A5F",
+        printConfig: {
+          paperFormat: "TM_U220",
+          printWidth: "66mm",
+          marginLeft: "5mm",
+          fontSize: "11.5px",
+        },
       });
       await loadCompanies();
       await loadSettings();
@@ -2891,6 +2903,55 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
                 />
               </div>
 
+              {/* Formato de Impresión POS Predeterminado */}
+              <div className="space-y-1.5 p-3 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                <label className="text-xs font-semibold text-white flex items-center gap-1.5">
+                  <Printer className="w-3.5 h-3.5 text-[#5AA9E6]" />
+                  Perfil de Impresión POS Predeterminado
+                </label>
+                <p className="text-[11px] text-[#94A3B8]">
+                  Configura la impresora que utilizarán los empleados de esta empresa (calibrada por Super Admin).
+                </p>
+                <div className="grid grid-cols-3 gap-2 pt-1">
+                  {[
+                    { id: "TM_U220", label: "Epson TM-U220", desc: "Rollo 7.5 cm" },
+                    { id: "80MM", label: "Térmica 80mm", desc: "Estándar" },
+                    { id: "58MM", label: "Térmica 58mm", desc: "Compacta" },
+                  ].map((p) => {
+                    const currentFmt = (newCompanyData as any).printConfig?.paperFormat || "TM_U220";
+                    const isSel = currentFmt === p.id;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => {
+                          const w = p.id === "TM_U220" ? "66mm" : p.id === "80MM" ? "72mm" : "48mm";
+                          const m = p.id === "TM_U220" ? "5mm" : p.id === "80MM" ? "2mm" : "1mm";
+                          const fs = p.id === "TM_U220" ? "11.5px" : p.id === "80MM" ? "11px" : "9.5px";
+                          setNewCompanyData({
+                            ...newCompanyData,
+                            printConfig: {
+                              paperFormat: p.id,
+                              printWidth: w,
+                              marginLeft: m,
+                              fontSize: fs,
+                            },
+                          });
+                        }}
+                        className={`p-2 rounded-lg border text-left cursor-pointer transition-all ${
+                          isSel
+                            ? "bg-[#5AA9E6]/20 border-[#5AA9E6] text-[#5AA9E6] font-bold shadow-sm"
+                            : "bg-black/20 border-white/10 text-[#94A3B8] hover:bg-white/5 hover:text-white"
+                        }`}
+                      >
+                        <div className="text-[11px] font-bold">{p.label}</div>
+                        <div className="text-[9px] opacity-80">{p.desc}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Logotipo de la Empresa / Negocio */}
               <div className="space-y-2 p-3 rounded-xl bg-white/[0.03] border border-white/[0.08]">
                 <div className="flex items-center justify-between">
@@ -3156,6 +3217,55 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
                   onChange={(e) => setCompanyToEdit({ ...companyToEdit, receiptMessage: e.target.value })}
                   className="h-8 text-xs"
                 />
+              </div>
+
+              {/* Formato de Impresión POS Predeterminado */}
+              <div className="space-y-1.5 p-3 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                <label className="text-xs font-semibold text-white flex items-center gap-1.5">
+                  <Printer className="w-3.5 h-3.5 text-[#5AA9E6]" />
+                  Perfil de Impresión POS Predeterminado
+                </label>
+                <p className="text-[11px] text-[#94A3B8]">
+                  Configura la impresora asignada a esta empresa (utilizada automáticamente por los empleados).
+                </p>
+                <div className="grid grid-cols-3 gap-2 pt-1">
+                  {[
+                    { id: "TM_U220", label: "Epson TM-U220", desc: "Rollo 7.5 cm" },
+                    { id: "80MM", label: "Térmica 80mm", desc: "Estándar" },
+                    { id: "58MM", label: "Térmica 58mm", desc: "Compacta" },
+                  ].map((p) => {
+                    const currentFmt = companyToEdit.printConfig?.paperFormat || "TM_U220";
+                    const isSel = currentFmt === p.id;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => {
+                          const w = p.id === "TM_U220" ? "66mm" : p.id === "80MM" ? "72mm" : "48mm";
+                          const m = p.id === "TM_U220" ? "5mm" : p.id === "80MM" ? "2mm" : "1mm";
+                          const fs = p.id === "TM_U220" ? "11.5px" : p.id === "80MM" ? "11px" : "9.5px";
+                          setCompanyToEdit({
+                            ...companyToEdit,
+                            printConfig: {
+                              paperFormat: p.id,
+                              printWidth: w,
+                              marginLeft: m,
+                              fontSize: fs,
+                            },
+                          });
+                        }}
+                        className={`p-2 rounded-lg border text-left cursor-pointer transition-all ${
+                          isSel
+                            ? "bg-[#5AA9E6]/20 border-[#5AA9E6] text-[#5AA9E6] font-bold shadow-sm"
+                            : "bg-black/20 border-white/10 text-[#94A3B8] hover:bg-white/5 hover:text-white"
+                        }`}
+                      >
+                        <div className="text-[11px] font-bold">{p.label}</div>
+                        <div className="text-[9px] opacity-80">{p.desc}</div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Logotipo de la Empresa / Negocio */}

@@ -30,7 +30,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { name, type, slogan, nit, phone, address, logoUrl, receiptMessage, primaryColor, secondaryColor } = body;
+    const { name, type, slogan, nit, phone, address, logoUrl, receiptMessage, primaryColor, secondaryColor, printConfig } = body;
 
     if (!name || !name.trim()) {
       return NextResponse.json({ error: "El nombre de la empresa es obligatorio." }, { status: 400 });
@@ -63,6 +63,12 @@ export async function POST(request: Request) {
       primaryColor: primaryColor?.trim() || "#5AA9E6",
       secondaryColor: secondaryColor?.trim() || "#1F3A5F",
       createdAt: new Date().toISOString(),
+      printConfig: printConfig || {
+        paperFormat: "TM_U220",
+        printWidth: "66mm",
+        marginLeft: "5mm",
+        fontSize: "11.5px",
+      },
     };
 
     companies.push(newCompany);

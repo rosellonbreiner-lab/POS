@@ -1031,6 +1031,22 @@ export default function DashboardPage() {
         isOpen={Boolean(activeTicketData)}
         onClose={() => setActiveTicketData(null)}
         data={activeTicketData}
+        userRole={user?.role}
+        companyId={activeCompany?.id || selectedCompanyId || user?.companyId}
+        onSavePrintConfig={async (compId, printConfig) => {
+          try {
+            const res = await fetch(`/api/companies/${compId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ printConfig }),
+            });
+            if (res.ok) {
+              await loadAllData();
+            }
+          } catch (err) {
+            console.error("Error guardando calibración de empresa:", err);
+          }
+        }}
       />
 
       {/* Modal de Ubicación Física en Almacén */}

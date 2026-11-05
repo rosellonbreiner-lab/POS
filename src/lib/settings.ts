@@ -4,6 +4,20 @@ import path from "path";
 const SETTINGS_FILE = path.join(process.cwd(), "workshop-settings.json");
 const BACKUP_SETTINGS_FILE = path.join(process.cwd(), "workshop-settings.backup.json");
 
+export interface PrintConfig {
+  paperFormat: "TM_U220" | "80MM" | "58MM";
+  printWidth: string;
+  marginLeft: string;
+  fontSize: string;
+}
+
+export const defaultPrintConfig: PrintConfig = {
+  paperFormat: "TM_U220",
+  printWidth: "66mm",
+  marginLeft: "5mm",
+  fontSize: "11.5px",
+};
+
 export interface Company {
   id: string;
   name: string;
@@ -17,6 +31,7 @@ export interface Company {
   primaryColor?: string;
   secondaryColor?: string;
   createdAt?: string;
+  printConfig?: PrintConfig;
 }
 
 export interface AuthorCreditSettings {
@@ -55,6 +70,7 @@ export const defaultCompanies: Company[] = [
     primaryColor: "#5AA9E6",
     secondaryColor: "#1F3A5F",
     createdAt: "2026-10-28T00:00:00.000Z",
+    printConfig: defaultPrintConfig,
   },
 ];
 
@@ -179,7 +195,10 @@ export function getSettings() {
       return {
         ...defaultSettings,
         ...parsed,
-        companies: parsed.companies && parsed.companies.length > 0 ? parsed.companies : defaultCompanies,
+        companies: (parsed.companies && parsed.companies.length > 0 ? parsed.companies : defaultCompanies).map((c: any) => ({
+          ...c,
+          printConfig: c.printConfig || defaultPrintConfig,
+        })),
         userCompanies: {
           ...defaultUserCompanies,
           ...(parsed.userCompanies || {}),

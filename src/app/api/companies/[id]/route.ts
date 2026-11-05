@@ -43,6 +43,12 @@ export async function PATCH(
       receiptMessage: body.receiptMessage !== undefined ? body.receiptMessage.trim() : currentCompany.receiptMessage,
       primaryColor: body.primaryColor !== undefined ? body.primaryColor.trim() : (currentCompany.primaryColor || "#5AA9E6"),
       secondaryColor: body.secondaryColor !== undefined ? body.secondaryColor.trim() : (currentCompany.secondaryColor || "#1F3A5F"),
+      printConfig: body.printConfig !== undefined ? body.printConfig : (currentCompany.printConfig || {
+        paperFormat: "TM_U220",
+        printWidth: "66mm",
+        marginLeft: "5mm",
+        fontSize: "11.5px",
+      }),
     };
 
     companies[index] = updatedCompany;

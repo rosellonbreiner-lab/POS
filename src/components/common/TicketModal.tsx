@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/Button";
-import { Printer, X, SlidersHorizontal, CheckCircle2 } from "lucide-react";
+import { Printer, X, SlidersHorizontal, CheckCircle2, ShieldCheck, Save, Loader2 } from "lucide-react";
 
 export interface TicketItem {
   name: string;
@@ -21,6 +21,15 @@ export interface TicketCreditInfo {
   receivedBy?: string;
 }
 
+export type PaperFormat = "TM_U220" | "80MM" | "58MM";
+
+export interface PrintConfig {
+  paperFormat: PaperFormat;
+  printWidth: string;
+  marginLeft: string;
+  fontSize: string;
+}
+
 export interface TicketData {
   type: "VENTA" | "COTIZACION" | "ORDEN" | "ABONO_CREDITO";
   consecutive: number | string;
@@ -34,6 +43,7 @@ export interface TicketData {
   paymentType?: string;
   creditInfo?: TicketCreditInfo;
   workshopConfig: {
+    id?: string;
     name: string;
     slogan?: string;
     nit?: string;
@@ -41,6 +51,7 @@ export interface TicketData {
     address?: string;
     logoUrl?: string;
     receiptMessage?: string;
+    printConfig?: PrintConfig;
   };
 }
 
@@ -48,9 +59,10 @@ interface TicketModalProps {
   isOpen: boolean;
   onClose: () => void;
   data: TicketData | null;
+  userRole?: string;
+  companyId?: string;
+  onSavePrintConfig?: (companyId: string, printConfig: PrintConfig) => Promise<void> | void;
 }
-
-type PaperFormat = "TM_U220" | "80MM" | "58MM";
 
 const FORMAT_CONFIGS: Record<PaperFormat, {
   label: string;
@@ -86,78 +98,117 @@ const FORMAT_CONFIGS: Record<PaperFormat, {
   },
 };
 
-const CALIBRATION_VERSION = "v4_75mm_wordwrap";
+export function TicketModal({
+  isOpen,
+  onClose,
+  data,
+  userRole,
+  companyId,
+  onSavePrintConfig,
+}: TicketModalProps) {
+  const isSuperAdmin = userRole === "SUPERADMIN";
+  const targetCompanyId = companyId || data?.workshopConfig?.id || "comp-mototaller";
+  const companyName = data?.workshopConfig?.name || "Empresa Actual";
 
-export function TicketModal({ isOpen, onClose, data }: TicketModalProps) {
   const [paperFormat, setPaperFormat] = useState<PaperFormat>("TM_U220");
   const [customWidth, setCustomWidth] = useState<string>("66mm");
   const [customMarginLeft, setCustomMarginLeft] = useState<string>("5mm");
   const [customFontSize, setCustomFontSize] = useState<string>("11.5px");
   const [showAdvancedTuning, setShowAdvancedTuning] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const [savingConfig, setSavingConfig] = useState(false);
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
 
+  // Cargar configuración de impresión de la empresa
   useEffect(() => {
     setMounted(true);
+    if (!isOpen || !data) return;
+
+    // 1. Configuración oficial que viene en los datos de la empresa desde el servidor
+    const serverCfg = data.workshopConfig?.printConfig;
+
+    // 2. Caché local específico por ID de empresa
+    let localCfg: PrintConfig | null = null;
     if (typeof window !== "undefined") {
-      const savedVersion = localStorage.getItem("pos_ticket_version");
-      if (savedVersion !== CALIBRATION_VERSION) {
-        // Auto-migración a la versión con salto de línea inteligente y calibrada para 7.5cm
-        localStorage.setItem("pos_ticket_version", CALIBRATION_VERSION);
-        localStorage.setItem("pos_ticket_paper_format", "TM_U220");
-        localStorage.setItem("pos_ticket_custom_width", "66mm");
-        localStorage.setItem("pos_ticket_custom_margin", "5mm");
-        localStorage.setItem("pos_ticket_custom_font_size", "11.5px");
-        setPaperFormat("TM_U220");
-        setCustomWidth("66mm");
-        setCustomMarginLeft("5mm");
-        setCustomFontSize("11.5px");
-      } else {
-        const savedFormat = localStorage.getItem("pos_ticket_paper_format") as PaperFormat;
-        if (savedFormat && FORMAT_CONFIGS[savedFormat]) {
-          setPaperFormat(savedFormat);
-        }
-        const savedWidth = localStorage.getItem("pos_ticket_custom_width");
-        if (savedWidth) setCustomWidth(savedWidth);
-        const savedMargin = localStorage.getItem("pos_ticket_custom_margin");
-        if (savedMargin) setCustomMarginLeft(savedMargin);
-        const savedFontSize = localStorage.getItem("pos_ticket_custom_font_size");
-        if (savedFontSize) setCustomFontSize(savedFontSize);
-      }
+      try {
+        const stored = localStorage.getItem(`pos_ticket_config_${targetCompanyId}`);
+        if (stored) localCfg = JSON.parse(stored);
+      } catch (_) {}
     }
-  }, []);
+
+    const effectiveCfg: PrintConfig = serverCfg || localCfg || {
+      paperFormat: "TM_U220",
+      printWidth: "66mm",
+      marginLeft: "5mm",
+      fontSize: "11.5px",
+    };
+
+    const fmt: PaperFormat = (effectiveCfg.paperFormat in FORMAT_CONFIGS) ? effectiveCfg.paperFormat : "TM_U220";
+    setPaperFormat(fmt);
+    setCustomWidth(effectiveCfg.printWidth || FORMAT_CONFIGS[fmt].printWidth);
+    setCustomMarginLeft(effectiveCfg.marginLeft || FORMAT_CONFIGS[fmt].marginLeft);
+    setCustomFontSize(effectiveCfg.fontSize || FORMAT_CONFIGS[fmt].fontSize);
+  }, [isOpen, data, targetCompanyId]);
 
   const handleSelectFormat = (fmt: PaperFormat) => {
+    if (!isSuperAdmin) return;
     setPaperFormat(fmt);
     const cfg = FORMAT_CONFIGS[fmt];
     setCustomWidth(cfg.printWidth);
     setCustomMarginLeft(cfg.marginLeft);
     setCustomFontSize(cfg.fontSize);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("pos_ticket_paper_format", fmt);
-      localStorage.setItem("pos_ticket_custom_width", cfg.printWidth);
-      localStorage.setItem("pos_ticket_custom_margin", cfg.marginLeft);
-      localStorage.setItem("pos_ticket_custom_font_size", cfg.fontSize);
-    }
   };
 
   const handleUpdateWidth = (w: string) => {
+    if (!isSuperAdmin) return;
     setCustomWidth(w);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("pos_ticket_custom_width", w);
-    }
   };
 
   const handleUpdateMargin = (m: string) => {
+    if (!isSuperAdmin) return;
     setCustomMarginLeft(m);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("pos_ticket_custom_margin", m);
-    }
   };
 
   const handleUpdateFontSize = (fs: string) => {
+    if (!isSuperAdmin) return;
     setCustomFontSize(fs);
+  };
+
+  // Guardar configuración oficial para la empresa activa (Solo Super Admin)
+  const handleSaveCompanyPrintConfig = async () => {
+    if (!isSuperAdmin) return;
+    setSavingConfig(true);
+    setSaveSuccessMsg(null);
+
+    const newCfg: PrintConfig = {
+      paperFormat,
+      printWidth: customWidth,
+      marginLeft: customMarginLeft,
+      fontSize: customFontSize,
+    };
+
+    // Guardar en caché local de esta empresa
     if (typeof window !== "undefined") {
-      localStorage.setItem("pos_ticket_custom_font_size", fs);
+      localStorage.setItem(`pos_ticket_config_${targetCompanyId}`, JSON.stringify(newCfg));
+    }
+
+    // Persistir en servidor para todos los usuarios de la empresa
+    try {
+      if (onSavePrintConfig) {
+        await onSavePrintConfig(targetCompanyId, newCfg);
+      } else {
+        await fetch(`/api/companies/${targetCompanyId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ printConfig: newCfg }),
+        });
+      }
+      setSaveSuccessMsg(`¡Configuración de impresión guardada para "${companyName}"!`);
+      setTimeout(() => setSaveSuccessMsg(null), 4000);
+    } catch (err: any) {
+      console.error("Error al guardar calibración de empresa:", err);
+    } finally {
+      setSavingConfig(false);
     }
   };
 
@@ -189,8 +240,7 @@ export function TicketModal({ isOpen, onClose, data }: TicketModalProps) {
   /**
    * Renderizador del cuerpo del ticket
    * Calibrado para alta legibilidad en impresoras matriciales (Epson TM-U220)
-   * Con SALTO DE LÍNEA AUTOMÁTICO (word-wrap) en cualquier información que no entre,
-   * garantizando que nada se recorte ni se pierda hacia la derecha.
+   * Con SALTO DE LÍNEA AUTOMÁTICO (word-wrap) en cualquier información que no entre.
    */
   const renderTicketBody = () => (
     <div className="w-full text-black font-mono leading-tight select-text text-left break-words [overflow-wrap:anywhere] [word-break:break-word] whitespace-normal">
@@ -320,7 +370,6 @@ export function TicketModal({ isOpen, onClose, data }: TicketModalProps) {
             <div className="space-y-1.5">
               {(data.items || []).map((item, idx) => (
                 <div key={idx} className="flex justify-between items-start leading-tight text-black border-b border-black/10 pb-0.5">
-                  {/* Descripción con salto de línea garantizado si el texto es largo */}
                   <div className="w-[50%] pr-1 break-words [overflow-wrap:anywhere] [word-break:break-word]">
                     <div className="font-bold break-words [overflow-wrap:anywhere] [word-break:break-word] whitespace-normal leading-snug">
                       {item.name}
@@ -329,11 +378,9 @@ export function TicketModal({ isOpen, onClose, data }: TicketModalProps) {
                       ${item.unitPrice.toLocaleString("es-CO")} c/u
                     </div>
                   </div>
-                  {/* Cantidad centrada y fijada sin encogerse */}
                   <div className="w-[16%] text-center font-bold font-mono shrink-0 pt-0.5">
                     {item.quantity}
                   </div>
-                  {/* Total alineado a la derecha sin recortarse */}
                   <div className="w-[34%] text-right font-black font-mono shrink-0 break-words [overflow-wrap:anywhere] pt-0.5">
                     ${item.total.toLocaleString("es-CO")}
                   </div>
@@ -384,14 +431,6 @@ export function TicketModal({ isOpen, onClose, data }: TicketModalProps) {
 
   return (
     <>
-      {/* 
-        CALIBRACIÓN EXACTA EPSON TM-U220 CON ROLLO DE 7.5 CM (75mm):
-        - Margen Izquierdo: 5mm (evita el punto ciego mecánico del cabezal tractor)
-        - Ancho: 66mm (cubre el rollo de 75mm sin dejar la franja blanca a la derecha)
-        - Font Size: 11.5px / 12.5px en negrita pura (legible en agujas de impacto y cinta entintada)
-        - Salto de línea forzado en CSS: word-break: break-word; overflow-wrap: anywhere;
-        - @page margin 0: Cero espacios en blanco arriba y abajo
-      */}
       <style jsx global>{`
         @page {
           margin: 0 !important;
@@ -473,148 +512,196 @@ export function TicketModal({ isOpen, onClose, data }: TicketModalProps) {
       {/* VISTA PREVIA EN PANTALLA */}
       <div className="fixed inset-0 z-70 overflow-y-auto bg-black/85 backdrop-blur-md p-3 sm:p-4 flex justify-center items-center no-print">
         <div className="w-full max-w-lg my-auto relative space-y-3">
-          {/* Barra de Controles Superior */}
+          {/* Barra Superior */}
           <div className="bg-[#13161F] p-3.5 rounded-2xl border border-white/[0.12] space-y-3 shadow-2xl">
             <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2 text-white text-sm font-bold">
-                <Printer className="w-4 h-4 text-[#5AA9E6]" />
-                <span>Impresión de Ticket POS</span>
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2 text-white text-sm font-bold">
+                  <Printer className="w-4 h-4 text-[#5AA9E6]" />
+                  <span>Impresión de Ticket POS</span>
+                </div>
+                <div className="text-[11px] text-[#94A3B8] flex items-center gap-1.5">
+                  <span>Empresa:</span>
+                  <b className="text-white">{companyName}</b>
+                  {isSuperAdmin ? (
+                    <span className="text-[10px] text-[#5AA9E6] bg-[#5AA9E6]/10 px-1.5 py-0.5 rounded border border-[#5AA9E6]/30 font-semibold flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3" /> Modo Super Admin
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 font-medium">
+                      ✓ Calibración Oficial
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button size="sm" variant="primary" onClick={handlePrint} className="font-bold text-xs h-8 px-3">
+                <Button size="sm" variant="primary" onClick={handlePrint} className="font-bold text-xs h-8 px-3.5 cursor-pointer shadow-md hover:scale-[1.02] transition-transform">
                   <Printer className="w-3.5 h-3.5 mr-1.5" />
                   Imprimir Ticket
                 </Button>
-                <Button size="sm" variant="ghost" onClick={onClose} className="p-1 h-8 w-8 text-[#94A3B8] hover:text-white">
+                <Button size="sm" variant="ghost" onClick={onClose} className="p-1 h-8 w-8 text-[#94A3B8] hover:text-white cursor-pointer">
                   <X className="w-4 h-4" />
                 </Button>
               </div>
             </div>
 
-            {/* Selector de Rollo / Impresora */}
-            <div className="pt-2 border-t border-white/[0.08] space-y-2">
-              <div className="flex items-center justify-between text-[11px] text-[#94A3B8]">
-                <span>Perfil de Impresora:</span>
-                <button
-                  type="button"
-                  onClick={() => setShowAdvancedTuning(!showAdvancedTuning)}
-                  className="text-[#5AA9E6] hover:underline flex items-center gap-1 text-[11px] font-semibold cursor-pointer"
-                >
-                  <SlidersHorizontal className="w-3.5 h-3.5" />
-                  {showAdvancedTuning ? "Ocultar Calibración" : "Ajustes de Impresión"}
-                </button>
-              </div>
-
-              <div className="grid grid-cols-3 gap-1.5">
-                {(Object.keys(FORMAT_CONFIGS) as PaperFormat[]).map((fmt) => {
-                  const cfg = FORMAT_CONFIGS[fmt];
-                  const active = paperFormat === fmt;
-                  return (
-                    <button
-                      key={fmt}
-                      type="button"
-                      onClick={() => handleSelectFormat(fmt)}
-                      className={`px-2.5 py-1.5 rounded-lg text-[10px] font-semibold transition-all border text-left cursor-pointer ${
-                        active
-                          ? "bg-[#5AA9E6]/20 border-[#5AA9E6] text-[#5AA9E6] shadow-sm font-bold"
-                          : "bg-white/[0.02] border-white/10 text-[#94A3B8] hover:text-white hover:bg-white/[0.06]"
-                      }`}
-                    >
-                      <div className="truncate font-bold">{cfg.label}</div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Panel de Ajuste Fino en Vivo */}
-              {showAdvancedTuning && (
-                <div className="p-3 rounded-xl bg-black/50 border border-[#5AA9E6]/30 text-[11px] space-y-2.5 mt-2 animate-in fade-in duration-150">
-                  {/* Calibración de Tamaño de Letra */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#94A3B8] font-medium">Tamaño de Letra:</span>
-                    <div className="flex gap-1.5">
-                      {[
-                        { label: "10.5px", val: "10.5px" },
-                        { label: "11.5px (Recomendado)", val: "11.5px" },
-                        { label: "12.5px (Grande)", val: "12.5px" },
-                      ].map((item) => (
-                        <button
-                          key={item.val}
-                          type="button"
-                          onClick={() => handleUpdateFontSize(item.val)}
-                          className={`px-2 py-0.5 rounded text-[10px] font-mono border transition-all ${
-                            customFontSize === item.val
-                              ? "bg-[#5AA9E6] text-black font-bold border-[#5AA9E6] shadow-sm"
-                              : "bg-white/5 border-white/10 text-[#EAF4F4] hover:bg-white/10"
-                          }`}
-                        >
-                          {item.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Calibración de Ancho de Impresión (Quita el espacio blanco de la derecha) */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#94A3B8] font-medium">Ancho (Rollo 7.5cm):</span>
-                    <div className="flex gap-1.5">
-                      {[
-                        { label: "64mm", val: "64mm" },
-                        { label: "66mm (Recomendado)", val: "66mm" },
-                        { label: "68mm", val: "68mm" },
-                        { label: "70mm", val: "70mm" },
-                      ].map((item) => (
-                        <button
-                          key={item.val}
-                          type="button"
-                          onClick={() => handleUpdateWidth(item.val)}
-                          className={`px-2 py-0.5 rounded text-[10px] font-mono border transition-all ${
-                            customWidth === item.val
-                              ? "bg-[#5AA9E6] text-black font-bold border-[#5AA9E6] shadow-sm"
-                              : "bg-white/5 border-white/10 text-[#EAF4F4] hover:bg-white/10"
-                          }`}
-                        >
-                          {item.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Calibración de Margen Izquierdo (Mueve hacia la derecha para no cortar a la izquierda) */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#94A3B8] font-medium">Margen Izquierdo:</span>
-                    <div className="flex gap-1.5">
-                      {[
-                        { label: "3.5mm", val: "3.5mm" },
-                        { label: "5mm (Recomendado)", val: "5mm" },
-                        { label: "6.5mm", val: "6.5mm" },
-                        { label: "8mm", val: "8mm" },
-                      ].map((item) => (
-                        <button
-                          key={item.val}
-                          type="button"
-                          onClick={() => handleUpdateMargin(item.val)}
-                          className={`px-2 py-0.5 rounded text-[10px] font-mono border transition-all ${
-                            customMarginLeft === item.val
-                              ? "bg-[#5AA9E6] text-black font-bold border-[#5AA9E6] shadow-sm"
-                              : "bg-white/5 border-white/10 text-[#EAF4F4] hover:bg-white/10"
-                          }`}
-                        >
-                          {item.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-1.5 text-[10px] text-[#34D399] bg-[#34D399]/10 p-2 rounded-lg border border-[#34D399]/20">
-                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                    <span>
-                      <b>Salto de Línea Inteligente:</b> Si ajustas el ancho o aumentas la letra, el texto largo salta automáticamente de renglón sin recortarse ni perderse a la derecha. Todo se lee completo y en orden.
-                    </span>
-                  </div>
+            {/* SECCIÓN DE CALIBRACIÓN: EXCLUSIVA PARA EL SUPER ADMIN */}
+            {isSuperAdmin && (
+              <div className="pt-2 border-t border-white/[0.08] space-y-2.5">
+                <div className="flex items-center justify-between text-[11px] text-[#94A3B8]">
+                  <span className="flex items-center gap-1 font-semibold text-white">
+                    <ShieldCheck className="w-3.5 h-3.5 text-[#5AA9E6]" />
+                    Ajustes de Impresora para esta Empresa:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvancedTuning(!showAdvancedTuning)}
+                    className="text-[#5AA9E6] hover:underline flex items-center gap-1 text-[10px] font-semibold cursor-pointer"
+                  >
+                    <SlidersHorizontal className="w-3 h-3" />
+                    {showAdvancedTuning ? "Ocultar Controles" : "Calibrar Milímetros"}
+                  </button>
                 </div>
-              )}
-            </div>
+
+                {/* Perfiles de Impresora */}
+                <div className="grid grid-cols-3 gap-1.5">
+                  {(Object.keys(FORMAT_CONFIGS) as PaperFormat[]).map((fmt) => {
+                    const cfg = FORMAT_CONFIGS[fmt];
+                    const active = paperFormat === fmt;
+                    return (
+                      <button
+                        key={fmt}
+                        type="button"
+                        onClick={() => handleSelectFormat(fmt)}
+                        className={`px-2.5 py-1.5 rounded-lg text-[10px] font-semibold transition-all border text-left cursor-pointer ${
+                          active
+                            ? "bg-[#5AA9E6]/20 border-[#5AA9E6] text-[#5AA9E6] shadow-sm font-bold"
+                            : "bg-white/[0.02] border-white/10 text-[#94A3B8] hover:text-white hover:bg-white/[0.06]"
+                        }`}
+                      >
+                        <div className="truncate font-bold">{cfg.label}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Controles de Calibración Fina (Solo Super Admin) */}
+                {showAdvancedTuning && (
+                  <div className="p-3 rounded-xl bg-black/50 border border-[#5AA9E6]/30 text-[11px] space-y-2.5 mt-2 animate-in fade-in duration-150">
+                    {/* Tamaño de Letra */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-[#94A3B8] font-medium">Tamaño de Letra:</span>
+                      <div className="flex gap-1.5">
+                        {[
+                          { label: "10.5px", val: "10.5px" },
+                          { label: "11.5px (Recomendado)", val: "11.5px" },
+                          { label: "12.5px (Grande)", val: "12.5px" },
+                        ].map((item) => (
+                          <button
+                            key={item.val}
+                            type="button"
+                            onClick={() => handleUpdateFontSize(item.val)}
+                            className={`px-2 py-0.5 rounded text-[10px] font-mono border transition-all cursor-pointer ${
+                              customFontSize === item.val
+                                ? "bg-[#5AA9E6] text-black font-bold border-[#5AA9E6] shadow-sm"
+                                : "bg-white/5 border-white/10 text-[#EAF4F4] hover:bg-white/10"
+                            }`}
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Ancho */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-[#94A3B8] font-medium">Ancho Imprimible:</span>
+                      <div className="flex gap-1.5">
+                        {[
+                          { label: "64mm", val: "64mm" },
+                          { label: "66mm (Recomendado 7.5cm)", val: "66mm" },
+                          { label: "68mm", val: "68mm" },
+                          { label: "70mm", val: "70mm" },
+                        ].map((item) => (
+                          <button
+                            key={item.val}
+                            type="button"
+                            onClick={() => handleUpdateWidth(item.val)}
+                            className={`px-2 py-0.5 rounded text-[10px] font-mono border transition-all cursor-pointer ${
+                              customWidth === item.val
+                                ? "bg-[#5AA9E6] text-black font-bold border-[#5AA9E6] shadow-sm"
+                                : "bg-white/5 border-white/10 text-[#EAF4F4] hover:bg-white/10"
+                            }`}
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Margen Izquierdo */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-[#94A3B8] font-medium">Margen Izquierdo:</span>
+                      <div className="flex gap-1.5">
+                        {[
+                          { label: "3.5mm", val: "3.5mm" },
+                          { label: "5mm (Recomendado)", val: "5mm" },
+                          { label: "6.5mm", val: "6.5mm" },
+                          { label: "8mm", val: "8mm" },
+                        ].map((item) => (
+                          <button
+                            key={item.val}
+                            type="button"
+                            onClick={() => handleUpdateMargin(item.val)}
+                            className={`px-2 py-0.5 rounded text-[10px] font-mono border transition-all cursor-pointer ${
+                              customMarginLeft === item.val
+                                ? "bg-[#5AA9E6] text-black font-bold border-[#5AA9E6] shadow-sm"
+                                : "bg-white/5 border-white/10 text-[#EAF4F4] hover:bg-white/10"
+                            }`}
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Botón para guardar la configuración permanente de esta empresa */}
+                    <div className="pt-1.5 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-2">
+                      <div className="text-[10px] text-[#34D399] flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" />
+                        <span>Salto de línea automático activo</span>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="primary"
+                        disabled={savingConfig}
+                        onClick={handleSaveCompanyPrintConfig}
+                        className="text-xs font-bold h-7.5 px-3 bg-gradient-to-r from-[#5AA9E6] to-[#1F3A5F] hover:opacity-90 shadow cursor-pointer shrink-0"
+                      >
+                        {savingConfig ? (
+                          <>
+                            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                            Guardando...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-3 h-3 mr-1" />
+                            Guardar para esta Empresa
+                          </>
+                        )}
+                      </Button>
+                    </div>
+
+                    {saveSuccessMsg && (
+                      <div className="text-[10px] text-[#34D399] font-bold text-center bg-[#34D399]/10 py-1 px-2 rounded border border-[#34D399]/30 animate-in fade-in">
+                        ✓ {saveSuccessMsg}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Papel Simulado en Pantalla (refleja en vivo ancho, tamaño de letra y salto de renglón) */}
