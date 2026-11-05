@@ -57,6 +57,7 @@ import { SalesView } from "@/components/sales/SalesView";
 import { CashAccountingView } from "@/components/cash/CashAccountingView";
 import { TicketModal, TicketData } from "@/components/common/TicketModal";
 import { CameraScannerModal } from "@/components/common/CameraScannerModal";
+import { playScanBeep } from "@/lib/sound";
 
 const TAB_TO_PATH: Record<string, string> = {
   "Dashboard": "/dashboard",
@@ -116,6 +117,7 @@ export default function DashboardPage() {
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [isSaleModalOpen, setIsSaleModalOpen] = useState(false);
+  const [productToSale, setProductToSale] = useState<any | null>(null);
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
   const [selectedOrderForEdit, setSelectedOrderForEdit] = useState<any>(null);
   const [selectedProductForLocation, setSelectedProductForLocation] = useState<any | null>(null);
@@ -375,12 +377,99 @@ export default function DashboardPage() {
     return () => clearTimeout(timer);
   }, [user, quickSearch]);
 
-  // 3. Pistola Láser (solo activa cuando el usuario está autenticado)
-  useBarcodeScanner({
-    enabled: !!user,
-    onScan: (code) => {
-      setLastScanned(code);
+  // 3. Pistola Láser y Lector Inteligente de Códigos de Barras
+  const isAnySubModalOpen =
+    isSaleModalOpen ||
+    isOrderModalOpen ||
+    isProductModalOpen ||
+    isQuoteModalOpen ||
+    isCameraScannerOpen;
+
+  const handleGlobalBarcodeScan = (code: string) => {
+    const cleanCode = code.trim();
+    if (!cleanCode) return;
+    setLastScanned(cleanCode);
+
+    // Buscar el producto en la empresa activa primero, o en el catálogo global
+    const found =
+      companyProducts.find(
+        (p) =>
+          (p.barcode && p.barcode.toLowerCase() === cleanCode.toLowerCase()) ||
+          p.sku.toLowerCase() === cleanCode.toLowerCase()
+      ) ||
+      products.find(
+        (p) =>
+          (p.barcode && p.barcode.toLowerCase() === cleanCode.toLowerCase()) ||
+          p.sku.toLowerCase() === cleanCode.toLowerCase()
+      );
+
+    // CASO 1: Si estamos en "Punto de Venta (POS)"
+    if (activeTab === "Punto de Venta (POS)") {
+      if (found) {
+        // Iniciar venta de inmediato con el producto cargado en el carrito
+        setProductToSale(found);
+        setIsSaleModalOpen(true);
+        playScanBeep(true);
+        setNotificationMsg({
+          type: "success",
+          text: `"${found.name}" agregado a la venta.`,
+        });
+      } else {
+        // Si no existe, notificar y permitir registrarlo
+        playScanBeep(false);
+        setNotificationMsg({
+          type: "error",
+          text: `El código "${cleanCode}" no está registrado en el inventario.`,
+        });
+        setLastScanned(cleanCode);
+        setIsProductModalOpen(true);
+      }
+      return;
+    }
+
+    // CASO 2: Si estamos en "Inventario & Kardex" o "Bajo Stock"
+    if (activeTab === "Inventario & Kardex" || activeTab === "Bajo Stock") {
+      if (found) {
+        // El producto ya existe: ubicarlo y filtrarlo en la tabla sin abrir el modal de crear producto
+        setQuickSearch(found.barcode || found.sku || cleanCode);
+        playScanBeep(true);
+        setNotificationMsg({
+          type: "success",
+          text: `Producto encontrado: "${found.name}" (Stock: ${found.currentStock} unidades | Ubicación: ${found.location || "Sin estante"}).`,
+        });
+      } else {
+        // No existe en inventario: abrir modal para agregarlo
+        playScanBeep(false);
+        setLastScanned(cleanCode);
+        setIsProductModalOpen(true);
+        setNotificationMsg({
+          type: "error",
+          text: `Código nuevo "${cleanCode}". Ingresa los datos del nuevo producto.`,
+        });
+      }
+      return;
+    }
+
+    // CASO 3: En cualquier otra vista (Dashboard, etc.)
+    if (found) {
+      // Iniciar venta directa
+      setProductToSale(found);
+      setIsSaleModalOpen(true);
+      playScanBeep(true);
+      setNotificationMsg({
+        type: "success",
+        text: `Iniciando venta para "${found.name}".`,
+      });
+    } else {
+      setLastScanned(cleanCode);
       setIsProductModalOpen(true);
+    }
+  };
+
+  useBarcodeScanner({
+    enabled: !!user && !isAnySubModalOpen,
+    onScan: (code) => {
+      handleGlobalBarcodeScan(code);
     },
   });
 
@@ -907,9 +996,14 @@ export default function DashboardPage() {
         isOpen={isSaleModalOpen}
         products={filteredProducts}
         companyId={selectedCompanyId !== "ALL" ? selectedCompanyId : (user.companyId || "comp-mototaller")}
-        onClose={() => setIsSaleModalOpen(false)}
+        initialProduct={productToSale}
+        onClose={() => {
+          setIsSaleModalOpen(false);
+          setProductToSale(null);
+        }}
         onSaleCreated={(createdInvoice) => {
           loadAllData();
+          setProductToSale(null);
           if (createdInvoice) {
             handlePrintInvoiceTicket(createdInvoice);
           }
@@ -1578,6 +1672,18 @@ export default function DashboardPage() {
               </p>
             </div>
 
+            {activeTab === "Punto de Venta (POS)" && (
+              <div className="flex items-center gap-2">
+                <Button variant="secondary" size="sm" onClick={() => setIsCameraScannerOpen(true)}>
+                  <Camera className="w-3.5 h-3.5 mr-1 text-[#5AA9E6]" />
+                  Escanear con Cámara
+                </Button>
+                <Button variant="primary" size="sm" onClick={() => setIsSaleModalOpen(true)}>
+                  <ShoppingCart className="w-3.5 h-3.5 mr-1" />
+                  Nueva Venta
+                </Button>
+              </div>
+            )}
             {activeTab === "Inventario & Kardex" && (
               <div className="flex items-center gap-2">
                 <Button variant="secondary" size="sm" onClick={() => setIsCameraScannerOpen(true)}>
@@ -2477,11 +2583,15 @@ export default function DashboardPage() {
         isOpen={isCameraScannerOpen}
         onClose={() => setIsCameraScannerOpen(false)}
         onScan={(barcode) => {
-          setLastScanned(barcode);
-          setQuickSearch(barcode);
-          navigateToTab("Inventario & Kardex");
+          handleGlobalBarcodeScan(barcode);
         }}
-        title="Escanear Repuesto con Cámara del Celular"
+        title={
+          activeTab === "Punto de Venta (POS)"
+            ? "Escanear Producto para Venta"
+            : isWorkshop
+            ? "Escanear Repuesto con Cámara del Celular"
+            : "Escanear Producto con Cámara del Celular"
+        }
       />
     </div>
   );

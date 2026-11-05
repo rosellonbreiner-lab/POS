@@ -43,9 +43,12 @@
     "trabajador@mototaller.co": "comp-mototaller",
     "barosellon@ferro.co": "comp-ferromax-3613"
   },
-  "invoiceCompanies": {},
+  "invoiceCompanies": {
+    "68e81b60-555f-47eb-bd11-374c3ba8e25c": "comp-mototaller"
+  },
   "productCompanies": {
-    "dd5d434d-066b-499a-abd4-cfa04cb7c543": "comp-ferromax-3613"
+    "dd5d434d-066b-499a-abd4-cfa04cb7c543": "comp-ferromax-3613",
+    "5fc6a294-4867-44d3-9926-b6cfc0a741d2": "comp-mototaller"
   },
   "orderCompanies": {},
   "quoteCompanies": {},
@@ -60,24 +63,24 @@
     "ADMIN": {
       "Dashboard": true,
       "Inventario & Kardex": true,
+      "Bajo Stock": true,
       "Punto de Venta (POS)": true,
       "Órdenes de Trabajo": true,
       "Cotizaciones": true,
       "Créditos": true,
       "Contabilidad & Caja": true,
-      "Configuración": true,
-      "Bajo Stock": true
+      "Configuración": true
     },
     "TRABAJADOR": {
       "Dashboard": true,
       "Inventario & Kardex": true,
+      "Bajo Stock": true,
       "Punto de Venta (POS)": true,
       "Órdenes de Trabajo": true,
       "Cotizaciones": true,
       "Créditos": false,
       "Contabilidad & Caja": false,
-      "Configuración": false,
-      "Bajo Stock": true
+      "Configuración": false
     }
   },
   "roleFeaturePermissions": {

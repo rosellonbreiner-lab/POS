@@ -16,6 +16,8 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { CameraScannerModal } from "@/components/common/CameraScannerModal";
+import { useBarcodeScanner } from "@/features/scanner/useBarcodeScanner";
+import { playScanBeep } from "@/lib/sound";
 
 interface CreateSaleModalProps {
   isOpen: boolean;
@@ -23,6 +25,7 @@ interface CreateSaleModalProps {
   onSaleCreated: (createdInvoice?: any) => void;
   products: any[];
   companyId?: string;
+  initialProduct?: any;
 }
 
 export function CreateSaleModal({
@@ -31,6 +34,7 @@ export function CreateSaleModal({
   onSaleCreated,
   products,
   companyId,
+  initialProduct,
 }: CreateSaleModalProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
@@ -46,10 +50,26 @@ export function CreateSaleModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // RESETEAR DATOS AL ABRIR: No guarda datos de ventas anteriores
+  // RESETEAR DATOS O CARGAR PRODUCTO INICIAL AL ABRIR
   useEffect(() => {
     if (isOpen) {
-      setCart([]);
+      if (initialProduct && initialProduct.currentStock > 0) {
+        setCart([
+          {
+            productId: initialProduct.id,
+            name: initialProduct.name,
+            sku: initialProduct.sku,
+            regularPrice: initialProduct.salePrice,
+            unitPrice: initialProduct.salePrice,
+            discount: 0,
+            quantity: 1,
+            total: initialProduct.salePrice,
+          },
+        ]);
+        playScanBeep(true);
+      } else {
+        setCart([]);
+      }
       setCustomerName("");
       setCustomerPhone("");
       setPlate("");
@@ -61,7 +81,15 @@ export function CreateSaleModal({
       setPaymentType("EFECTIVO");
       setError(null);
     }
-  }, [isOpen]);
+  }, [isOpen, initialProduct]);
+
+  // Escáner de pistola láser directo dentro del modal de venta
+  useBarcodeScanner({
+    enabled: isOpen && !isCameraOpen,
+    onScan: (barcode) => {
+      handleBarcodeScan(barcode);
+    },
+  });
 
   if (!isOpen) return null;
 
@@ -87,18 +115,68 @@ export function CreateSaleModal({
     setError(null);
   };
 
+  // Agregar directamente al carrito con pistola o cámara
+  const addProductDirectlyToCart = (prod: any) => {
+    if (prod.currentStock <= 0) {
+      setError(`"${prod.name}" no tiene existencias disponibles (Stock: 0).`);
+      playScanBeep(false);
+      return;
+    }
+
+    const existingIndex = cart.findIndex((i) => i.productId === prod.id);
+    if (existingIndex > -1) {
+      const currentInCart = cart[existingIndex].quantity;
+      if (currentInCart >= prod.currentStock) {
+        setError(
+          `Stock máximo alcanzado para "${prod.name}" (${prod.currentStock} unidades disponibles).`
+        );
+        playScanBeep(false);
+        return;
+      }
+      const updated = [...cart];
+      const newQty = currentInCart + 1;
+      updated[existingIndex].quantity = newQty;
+      updated[existingIndex].total = newQty * updated[existingIndex].unitPrice;
+      setCart(updated);
+    } else {
+      setCart((prev) => [
+        ...prev,
+        {
+          productId: prod.id,
+          name: prod.name,
+          sku: prod.sku,
+          regularPrice: prod.salePrice,
+          unitPrice: prod.salePrice,
+          discount: 0,
+          quantity: 1,
+          total: prod.salePrice,
+        },
+      ]);
+    }
+
+    playScanBeep(true);
+    setSearchTerm("");
+    setSelectedProduct(null);
+    setError(null);
+  };
+
   const handleBarcodeScan = (barcode: string) => {
+    const clean = barcode.trim();
+    if (!clean) return;
+
     // Buscar repuesto por código de barras o SKU exacto
     const found = products.find(
       (p) =>
-        (p.barcode && p.barcode.toLowerCase() === barcode.toLowerCase()) ||
-        p.sku.toLowerCase() === barcode.toLowerCase()
+        (p.barcode && p.barcode.toLowerCase() === clean.toLowerCase()) ||
+        p.sku.toLowerCase() === clean.toLowerCase()
     );
 
     if (found) {
-      handleSelectProduct(found);
+      addProductDirectlyToCart(found);
     } else {
-      setSearchTerm(barcode);
+      setSearchTerm(clean);
+      setError(`Código "${clean}" no encontrado en el catálogo de esta empresa.`);
+      playScanBeep(false);
     }
   };
 
