@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 
 export function middleware(request: NextRequest) {
   const response = NextResponse.next();
+  const isProd = process.env.NODE_ENV === "production";
 
   // OWASP ASVS & Google Safe Browsing 2026 Hardening Headers
   response.headers.set("X-Frame-Options", "DENY");
@@ -21,13 +22,22 @@ export function middleware(request: NextRequest) {
   response.headers.set("X-Permitted-Cross-Domain-Policies", "none");
   response.headers.set("X-XSS-Protection", "0");
 
+  // Directivas CSP optimizadas: sin comodines inseguros (sin 'https:' o 'http:' abiertos)
+  const scriptSrc = isProd
+    ? "'self' 'unsafe-inline'"
+    : "'self' 'unsafe-eval' 'unsafe-inline'";
+
+  const connectSrc = isProd
+    ? "'self'"
+    : "'self' ws: wss:";
+
   const cspDirectives = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+    `script-src ${scriptSrc}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https:",
+    "img-src 'self' data: blob:",
     "font-src 'self' data:",
-    "connect-src 'self' http: https: ws: wss:",
+    `connect-src ${connectSrc}`,
     "frame-ancestors 'none'",
     "object-src 'none'",
     "base-uri 'self'",
@@ -35,12 +45,14 @@ export function middleware(request: NextRequest) {
   ];
   response.headers.set("Content-Security-Policy", cspDirectives.join("; "));
 
-  // En rutas de API críticas o datos sensibles, evitar almacenamiento en caché de navegadores intermediarios
-  if (request.nextUrl.pathname.startsWith("/api/")) {
-    response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-    response.headers.set("Pragma", "no-cache");
-    response.headers.set("Expires", "0");
-  }
+  // Políticas de control de caché estrictas para prevenir almacenamiento de datos comerciales en navegadores o proxies
+  response.headers.set(
+    "Cache-Control",
+    "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+  );
+  response.headers.set("Pragma", "no-cache");
+  response.headers.set("Expires", "0");
+  response.headers.set("Surrogate-Control", "no-store");
 
   return response;
 }

@@ -54,10 +54,14 @@ certificates/
 # Base de datos SQLite local (No subir base de datos local con datos de prueba)
 *.db
 *.db-journal
+*.db-wal
+*.db-shm
 *.sqlite
 *.sqlite3
 prisma/*.db
 prisma/*.db-journal
+prisma/*.db-wal
+prisma/*.db-shm
 
 # vercel
 .vercel
