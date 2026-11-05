@@ -92,7 +92,7 @@ export function CreateProductModal({
 
   return (
     <div 
-      className="fixed inset-0 z-50 overflow-y-auto bg-black/75 backdrop-blur-md p-4 sm:p-6 md:p-10 flex justify-center items-center"
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/75 backdrop-blur-md p-3 sm:p-6 md:p-10 flex justify-center items-center"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -128,7 +128,7 @@ export function CreateProductModal({
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-[#9CA3AF] font-medium block mb-1">SKU (Código) *</label>
                   <Input

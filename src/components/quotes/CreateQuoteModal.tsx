@@ -158,7 +158,7 @@ export function CreateQuoteModal({
   return (
     <>
       <div 
-        className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-md p-4 sm:p-6 md:p-10 flex justify-center items-center"
+        className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-md p-3 sm:p-6 md:p-10 flex justify-center items-center"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -197,7 +197,7 @@ export function CreateQuoteModal({
                 <span className="text-xs font-semibold text-[#22D3EE] uppercase tracking-wider block">
                   Cliente & Motocicleta
                 </span>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs text-[#9CA3AF] block mb-1">Nombre Cliente *</label>
                     <Input
@@ -217,9 +217,9 @@ export function CreateQuoteModal({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs text-[#9CA3AF] block mb-1">Placa Moto (Mayúsculas Automático)</label>
+                    <label className="text-xs text-[#9CA3AF] block mb-1">Placa Moto</label>
                     <Input
                       placeholder="Ej. XZY45A"
                       value={plate}
@@ -365,14 +365,14 @@ export function CreateQuoteModal({
               </div>
 
               {/* Total Cotizado (Solo Repuestos) */}
-              <div className="p-4 rounded-xl bg-white/[0.04] border border-white/[0.08] flex justify-between items-center">
+              <div className="p-3.5 sm:p-4 rounded-xl bg-white/[0.04] border border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                   <span className="text-xs text-[#9CA3AF] uppercase tracking-wider block">Total Cotización Repuestos</span>
                   <span className="text-xs text-[#9CA3AF]">
                     {itemsList.length} repuesto(s) listado(s)
                   </span>
                 </div>
-                <div className="text-2xl font-bold text-[#22D3EE] tabular-nums">
+                <div className="text-xl sm:text-2xl font-bold text-[#22D3EE] tabular-nums">
                   ${quoteTotal.toLocaleString("es-CO")} COP
                 </div>
               </div>

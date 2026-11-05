@@ -1523,27 +1523,27 @@ export default function DashboardPage() {
       </aside>
 
       {/* Área Principal */}
-      <main className="flex-1 flex flex-col min-w-0">
+      <main className="flex-1 flex flex-col min-w-0 w-full overflow-x-hidden">
         {/* Topbar alineado perfectamente con los recuadros de abajo */}
-        <div className="px-4 sm:px-6 pt-4 sticky top-0 z-20 w-full">
-          <header className="h-12 border border-white/[0.12] rounded-2xl px-4 sm:px-5 flex items-center justify-between glass gap-3 shadow-lg shadow-black/30">
+        <div className="px-3 sm:px-6 pt-3 sm:pt-4 sticky top-0 z-20 w-full">
+          <header className="h-12 border border-white/[0.12] rounded-2xl px-3 sm:px-5 flex items-center justify-between glass gap-2 sm:gap-3 shadow-lg shadow-black/30">
             {/* Botón Menú Móvil */}
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
               <button
                 type="button"
                 onClick={() => setIsMobileMenuOpen(true)}
-                className="md:hidden text-[#9CA3AF] hover:text-white p-1.5 rounded-lg bg-white/[0.05] border border-white/[0.08] cursor-pointer"
+                className="md:hidden text-[#9CA3AF] hover:text-white p-1.5 rounded-lg bg-white/[0.05] border border-white/[0.08] cursor-pointer shrink-0"
               >
                 <Menu className="w-4 h-4" />
               </button>
 
-              <div className="flex items-center gap-2 w-44 sm:w-64">
+              <div className="flex items-center gap-2 flex-1 min-w-0 max-w-[140px] xs:max-w-[170px] sm:max-w-xs">
                 <Input
-                  icon={<Search className="w-3.5 h-3.5" />}
+                  icon={<Search className="w-3.5 h-3.5 shrink-0" />}
                   placeholder={isWorkshop ? "Buscar repuesto, placa, SKU..." : "Buscar producto, código, SKU..."}
                   value={quickSearch}
                   onChange={(e) => setQuickSearch(e.target.value)}
-                  className="h-7.5 text-xs"
+                  className="h-7.5 text-xs w-full"
                 />
               </div>
 
@@ -1580,12 +1580,12 @@ export default function DashboardPage() {
               )}
             </div>
 
-            <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => setIsQuoteModalOpen(true)}
-                className="h-7.5 px-2.5 text-xs font-semibold cursor-pointer"
+                className="h-7.5 px-2 sm:px-2.5 text-xs font-semibold cursor-pointer"
                 title="Crear nueva cotización"
               >
                 <Calculator className="w-3.5 h-3.5 sm:mr-1 text-[#5AA9E6]" />
@@ -1597,7 +1597,7 @@ export default function DashboardPage() {
                   variant="secondary"
                   size="sm"
                   onClick={() => setIsOrderModalOpen(true)}
-                  className="h-7.5 px-2.5 text-xs font-semibold cursor-pointer"
+                  className="h-7.5 px-2 sm:px-2.5 text-xs font-semibold cursor-pointer"
                   title="Asignar repuestos a moto / Orden de trabajo"
                 >
                   <Package className="w-3.5 h-3.5 sm:mr-1 text-[#5AA9E6]" />
@@ -1609,11 +1609,11 @@ export default function DashboardPage() {
                 variant="primary"
                 size="sm"
                 onClick={() => setIsSaleModalOpen(true)}
-                className="h-7.5 px-3 text-xs font-bold cursor-pointer"
+                className="h-7.5 px-2.5 sm:px-3 text-xs font-bold cursor-pointer"
                 title="Facturar venta en mostrador (POS)"
               >
                 <ShoppingCart className="w-3.5 h-3.5 sm:mr-1" />
-                <span>Nueva Venta</span>
+                <span className="hidden sm:inline">Nueva Venta</span>
               </Button>
             </div>
           </header>
@@ -1638,8 +1638,8 @@ export default function DashboardPage() {
 
           {/* Encabezado del Módulo Activo */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-bold tracking-tight text-white font-[family-name:var(--font-space-grotesk)]">
+            <div className="min-w-0">
+              <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white font-[family-name:var(--font-space-grotesk)]">
                 {activeTab}
               </h2>
               <p className="text-xs text-[#9CA3AF]">
@@ -1657,7 +1657,7 @@ export default function DashboardPage() {
             </div>
 
             {activeTab === "Punto de Venta (POS)" && (
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
                 <Button variant="secondary" size="sm" onClick={() => setIsCameraScannerOpen(true)}>
                   <Camera className="w-3.5 h-3.5 mr-1 text-[#5AA9E6]" />
                   Escanear con Cámara
@@ -1669,7 +1669,7 @@ export default function DashboardPage() {
               </div>
             )}
             {activeTab === "Inventario & Kardex" && (
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
                 <Button variant="secondary" size="sm" onClick={() => setIsCameraScannerOpen(true)}>
                   <Camera className="w-3.5 h-3.5 mr-1 text-[#5AA9E6]" />
                   Escanear con Cámara
@@ -1681,7 +1681,7 @@ export default function DashboardPage() {
               </div>
             )}
             {activeTab === "Bajo Stock" && (
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
                 <Button
                   variant="secondary"
                   size="sm"
@@ -1732,7 +1732,7 @@ export default function DashboardPage() {
           {activeTab === "Dashboard" && (
             <div className="space-y-6">
               {/* KPIs Reales */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 {kpis.map((kpi, idx) => (
                   <Card key={idx} className="group hover:border-[#5AA9E6]/40 transition-all duration-200">
                     <div className="flex items-center justify-between text-[#9CA3AF] mb-3">
@@ -1754,14 +1754,14 @@ export default function DashboardPage() {
               </div>
 
               {/* Accesos Rápidos */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 <Card className="hover:border-[#5AA9E6]/40 cursor-pointer" onClick={() => setIsSaleModalOpen(true)}>
                   <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-xl bg-[#5AA9E6]/20 text-[#5AA9E6]">
+                    <div className="p-3 rounded-xl bg-[#5AA9E6]/20 text-[#5AA9E6] shrink-0">
                       <ShoppingCart className="w-6 h-6" />
                     </div>
-                    <div>
-                      <h4 className="font-bold text-white">Facturar en Mostrador</h4>
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-white text-sm sm:text-base">Facturar en Mostrador</h4>
                       <p className="text-xs text-[#9CA3AF]">Cobra repuestos y descuenta stock</p>
                     </div>
                   </div>
@@ -1769,11 +1769,11 @@ export default function DashboardPage() {
 
                 <Card className="hover:border-[#22D3EE]/40 cursor-pointer" onClick={() => setIsOrderModalOpen(true)}>
                   <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-xl bg-[#22D3EE]/20 text-[#22D3EE]">
+                    <div className="p-3 rounded-xl bg-[#22D3EE]/20 text-[#22D3EE] shrink-0">
                       <Package className="w-6 h-6" />
                     </div>
-                    <div>
-                      <h4 className="font-bold text-white">Asignar Repuestos a Moto</h4>
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-white text-sm sm:text-base">Asignar Repuestos a Moto</h4>
                       <p className="text-xs text-[#9CA3AF]">Abre orden y entrega piezas</p>
                     </div>
                   </div>
@@ -1781,11 +1781,11 @@ export default function DashboardPage() {
 
                 <Card className="hover:border-[#34D399]/40 cursor-pointer" onClick={() => setIsQuoteModalOpen(true)}>
                   <div className="flex items-center gap-3">
-                    <div className="p-3 rounded-xl bg-[#34D399]/20 text-[#34D399]">
+                    <div className="p-3 rounded-xl bg-[#34D399]/20 text-[#34D399] shrink-0">
                       <Calculator className="w-6 h-6" />
                     </div>
-                    <div>
-                      <h4 className="font-bold text-white">Hacer Cotización</h4>
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-white text-sm sm:text-base">Hacer Cotización</h4>
                       <p className="text-xs text-[#9CA3AF]">Estima repuestos para un cliente</p>
                     </div>
                   </div>
@@ -1961,14 +1961,14 @@ export default function DashboardPage() {
           {activeTab === "Bajo Stock" && (
             <div className="space-y-4">
               {/* 4 KPIs de Resumen de Pedidos */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <Card className="p-3.5 bg-gradient-to-br from-amber-500/10 to-transparent border-amber-500/30">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-semibold">Artículos Bajo Stock</p>
                       <p className="text-2xl font-bold text-amber-300 mt-0.5 tabular-nums">{lowStockProducts.length}</p>
                     </div>
-                    <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                    <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
                       <AlertTriangle className="w-5 h-5" />
                     </div>
                   </div>
@@ -1983,7 +1983,7 @@ export default function DashboardPage() {
                       <p className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-semibold">Agotados Críticos (0)</p>
                       <p className="text-2xl font-bold text-red-400 mt-0.5 tabular-nums">{outOfStockCount}</p>
                     </div>
-                    <div className="w-9 h-9 rounded-xl bg-red-500/15 border border-red-500/30 flex items-center justify-center text-red-400">
+                    <div className="w-9 h-9 rounded-xl bg-red-500/15 border border-red-500/30 flex items-center justify-center text-red-400 shrink-0">
                       <PackageCheck className="w-5 h-5" />
                     </div>
                   </div>
@@ -1998,7 +1998,7 @@ export default function DashboardPage() {
                       <p className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-semibold">Total Unidades a Pedir</p>
                       <p className="text-2xl font-bold text-[#5AA9E6] mt-0.5 tabular-nums">{totalSuggestedUnits}</p>
                     </div>
-                    <div className="w-9 h-9 rounded-xl bg-[#5AA9E6]/15 border border-[#5AA9E6]/30 flex items-center justify-center text-[#5AA9E6]">
+                    <div className="w-9 h-9 rounded-xl bg-[#5AA9E6]/15 border border-[#5AA9E6]/30 flex items-center justify-center text-[#5AA9E6] shrink-0">
                       <ShoppingCart className="w-5 h-5" />
                     </div>
                   </div>
@@ -2009,13 +2009,13 @@ export default function DashboardPage() {
 
                 <Card className="p-3.5 bg-gradient-to-br from-emerald-500/10 to-transparent border-emerald-500/30">
                   <div className="flex items-center justify-between">
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-semibold">Inversión Costo Estimada</p>
-                      <p className="text-2xl font-bold text-emerald-400 mt-0.5 tabular-nums">
+                      <p className="text-xl sm:text-2xl font-bold text-emerald-400 mt-0.5 tabular-nums truncate">
                         ${totalEstimatedInvestment.toLocaleString("es-CO")}
                       </p>
                     </div>
-                    <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
                       <DollarSign className="w-5 h-5" />
                     </div>
                   </div>
@@ -2311,28 +2311,28 @@ export default function DashboardPage() {
                         key={ord.id}
                         className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:border-[#5AA9E6]/40 transition-colors"
                       >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <div className="flex items-center gap-2">
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2.5">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
                               <span className="font-mono font-bold text-lg text-[#5AA9E6]">
                                 #{ord.consecutive}
                               </span>
-                              <span className="font-mono font-bold px-2.5 py-0.5 rounded bg-white/[0.08] text-white">
+                              <span className="font-mono font-bold px-2.5 py-0.5 rounded bg-white/[0.08] text-white text-xs">
                                 {ord.motorcycle?.plate}
                               </span>
-                              <span className="text-sm font-medium text-white">
+                              <span className="text-sm font-medium text-white truncate max-w-[200px]">
                                 {ord.motorcycle?.model}
                               </span>
                               <Badge variant="info">{ord.status}</Badge>
                             </div>
-                            <p className="text-xs text-[#9CA3AF] mt-1">
+                            <p className="text-xs text-[#9CA3AF] mt-1 truncate">
                               Cliente: <b className="text-white">{ord.customer?.name}</b> · Tel: {ord.customer?.phone || "Sin teléfono"}
                             </p>
                           </div>
 
-                          <div className="text-right">
+                          <div className="text-left sm:text-right shrink-0 mt-1 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/[0.06]">
                             <span className="text-xs text-[#9CA3AF] block">Total Orden:</span>
-                            <span className="text-xl font-bold text-white tabular-nums">
+                            <span className="text-lg sm:text-xl font-bold text-white tabular-nums">
                               ${ord.total.toLocaleString("es-CO")} COP
                             </span>
                           </div>

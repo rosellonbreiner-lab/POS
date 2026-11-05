@@ -94,15 +94,15 @@ export function LoginForm({ onLoginSuccess }: LoginPageProps) {
 
       {/* Header superior general de gestión */}
       <header className="relative z-10 p-4 sm:p-6 flex items-center justify-between max-w-7xl mx-auto w-full">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#1F3A5F]/70 border border-[#5AA9E6]/40 flex items-center justify-center text-[#5AA9E6] shadow-[0_0_20px_rgba(90,169,230,0.35)]">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-[#1F3A5F]/70 border border-[#5AA9E6]/40 flex items-center justify-center text-[#5AA9E6] shadow-[0_0_20px_rgba(90,169,230,0.35)] shrink-0">
             <Layers className="w-5 h-5 text-[#5AA9E6]" />
           </div>
-          <div>
-            <h1 className="text-base font-extrabold text-[#EAF4F4] tracking-wider uppercase font-[family-name:var(--font-space-grotesk)]">
+          <div className="min-w-0">
+            <h1 className="text-sm sm:text-base font-extrabold text-[#EAF4F4] tracking-wider uppercase font-[family-name:var(--font-space-grotesk)] truncate">
               SISTEMA DE <span className="text-[#5AA9E6]">GESTIÓN POS</span>
             </h1>
-            <p className="text-[10px] text-[#94A3B8] tracking-widest font-mono">
+            <p className="text-[9px] sm:text-[10px] text-[#94A3B8] tracking-widest font-mono truncate">
               CONTROL COMERCIAL & ADMINISTRATIVO
             </p>
           </div>
@@ -110,9 +110,9 @@ export function LoginForm({ onLoginSuccess }: LoginPageProps) {
       </header>
 
       {/* Contenido Central: Panel Visual de Gestión + Tarjeta de Acceso */}
-      <main className="relative z-10 flex-1 flex flex-col lg:flex-row items-center justify-center max-w-6xl mx-auto w-full px-4 py-4 gap-8 lg:gap-12">
-        {/* Lado Izquierdo: Presentación animada del Sistema de Gestión */}
-        <div className="w-full lg:w-1/2 flex flex-col items-center text-center lg:items-start lg:text-left relative">
+      <main className="relative z-10 flex-1 flex flex-col lg:flex-row items-center justify-center max-w-6xl mx-auto w-full px-4 py-4 sm:py-6 gap-6 lg:gap-12">
+        {/* Lado Izquierdo: Presentación animada del Sistema de Gestión (Visible en pantallas medianas y grandes) */}
+        <div className="hidden lg:flex w-full lg:w-1/2 flex-col items-center text-center lg:items-start lg:text-left relative">
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#EAF4F4] tracking-tight leading-tight">
             Control Integral y <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#5AA9E6] via-[#EAF4F4] to-[#5AA9E6]">
@@ -129,9 +129,9 @@ export function LoginForm({ onLoginSuccess }: LoginPageProps) {
           </div>
         </div>
 
-        {/* Lado Derecho: Tarjeta de Acceso Minimal Dashboard (#222831, #1F3A5F, #5AA9E6, #EAF4F4) */}
-        <div className="w-full lg:w-[420px] shrink-0">
-          <div className="bg-[#222831]/90 backdrop-blur-2xl border border-[#5AA9E6]/30 rounded-3xl p-6 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.65)] relative overflow-hidden">
+        {/* Lado Derecho / Centro Móvil: Tarjeta de Acceso Minimal Dashboard */}
+        <div className="w-full max-w-md lg:w-[420px] shrink-0 mx-auto">
+          <div className="bg-[#222831]/95 backdrop-blur-2xl border border-[#5AA9E6]/30 rounded-3xl p-5 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.65)] relative overflow-hidden">
             {/* Barra superior con gradiente de la paleta */}
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#1F3A5F] via-[#5AA9E6] to-[#1F3A5F]"></div>
 
@@ -215,7 +215,7 @@ export function LoginForm({ onLoginSuccess }: LoginPageProps) {
       </main>
 
       {/* Footer minimalista con botón/hipervínculo By Breiner Rosellon */}
-      <footer className="relative z-10 p-4 text-xs text-[#94A3B8]/80 max-w-7xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-3">
+      <footer className="relative z-10 p-4 text-xs text-[#94A3B8]/80 max-w-7xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
         <span>Sistema de Gestión Comercial & POS © 2026 · Eficiencia y Control</span>
         {authorCredit.enabled && (
           <a

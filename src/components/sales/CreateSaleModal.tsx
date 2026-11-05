@@ -301,7 +301,7 @@ export function CreateSaleModal({
   return (
     <>
       <div
-        className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-md p-4 sm:p-6 md:p-10 flex justify-center items-center"
+        className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-md p-3 sm:p-6 md:p-10 flex justify-center items-center"
         onClick={(e) => {
           if (e.target === e.currentTarget) onClose();
         }}
@@ -666,15 +666,15 @@ export function CreateSaleModal({
                 </div>
 
                 {/* Botón Cobrar */}
-                <div className="pt-4 border-t border-white/[0.08] flex justify-end gap-3 sticky bottom-0 bg-[#13161F] py-2">
-                  <Button type="button" variant="ghost" onClick={onClose}>
+                <div className="pt-4 border-t border-white/[0.08] flex flex-wrap sm:flex-nowrap justify-end gap-2.5 sm:gap-3 sticky bottom-0 bg-[#13161F] py-2">
+                  <Button type="button" variant="ghost" onClick={onClose} className="w-full sm:w-auto">
                     Cancelar
                   </Button>
                   <Button
                     type="submit"
                     disabled={loading || cart.length === 0}
                     variant={paymentType === "CREDITO" ? "secondary" : "primary"}
-                    className={`px-6 font-bold ${
+                    className={`w-full sm:w-auto px-6 font-bold ${
                       paymentType === "CREDITO"
                         ? "bg-amber-500/20 border border-amber-500 text-amber-300 hover:bg-amber-500 hover:text-black"
                         : ""

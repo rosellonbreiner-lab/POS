@@ -237,31 +237,31 @@ export function SalesView({
       </Card>
 
       {/* Mini-resumen de la fecha seleccionada */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
         <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.08]">
           <div className="text-[11px] text-[#94A3B8]">Facturas Registradas</div>
-          <div className="text-lg font-bold text-white mt-0.5 tabular-nums">
+          <div className="text-base sm:text-lg font-bold text-white mt-0.5 tabular-nums">
             {stats.count} facturas
           </div>
         </div>
 
         <div className="p-3 rounded-xl bg-[#5AA9E6]/10 border border-[#5AA9E6]/30">
           <div className="text-[11px] text-[#5AA9E6] font-medium">Total Facturado</div>
-          <div className="text-lg font-bold text-white mt-0.5 tabular-nums">
+          <div className="text-base sm:text-lg font-bold text-white mt-0.5 tabular-nums truncate">
             ${stats.totalCobrado.toLocaleString("es-CO")} COP
           </div>
         </div>
 
         <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.08]">
           <div className="text-[11px] text-[#34D399]">Efectivo / Transferencia</div>
-          <div className="text-lg font-bold text-[#34D399] mt-0.5 tabular-nums">
+          <div className="text-base sm:text-lg font-bold text-[#34D399] mt-0.5 tabular-nums truncate">
             ${(stats.efectivo + stats.transferencia).toLocaleString("es-CO")} COP
           </div>
         </div>
 
         <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.08]">
           <div className="text-[11px] text-amber-300">Ventas a Crédito (Fiado)</div>
-          <div className="text-lg font-bold text-amber-300 mt-0.5 tabular-nums">
+          <div className="text-base sm:text-lg font-bold text-amber-300 mt-0.5 tabular-nums truncate">
             ${stats.credito.toLocaleString("es-CO")} COP
           </div>
         </div>
@@ -269,7 +269,7 @@ export function SalesView({
 
       {/* Tabla Principal de Facturas */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2">
           <div>
             <CardTitle className="text-base flex items-center gap-2">
               <Receipt className="w-4 h-4 text-[#5AA9E6]" />
