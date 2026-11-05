@@ -265,3 +265,4 @@ Define los metadatos necesarios para que los motores Chromium (Android, Chrome, 
 ---
 
 © 2026 **Breiner Rosellon** — Todos los derechos reservados.
+

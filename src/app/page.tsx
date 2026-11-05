@@ -1402,7 +1402,7 @@ export default function DashboardPage() {
                 onClick={() => {
                   setIsMobileMenuOpen(false);
                   localStorage.removeItem("pos_pwa_dismissed");
-                  window.dispatchEvent(new Event("beforeinstallprompt"));
+                  window.dispatchEvent(new CustomEvent("open-pwa-guide"));
                 }}
                 className="w-full mt-2 flex items-center justify-between px-3 py-2 rounded-xl bg-gradient-to-r from-[#1F3A5F]/70 to-[#5AA9E6]/20 border border-[#5AA9E6]/40 text-[#5AA9E6] hover:text-white text-xs font-bold transition-all cursor-pointer shadow-md shadow-[#1F3A5F]/30"
               >
