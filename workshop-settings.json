@@ -56,7 +56,8 @@
     "barosellon@ferro.co": "comp-ferromax-3613"
   },
   "invoiceCompanies": {
-    "68e81b60-555f-47eb-bd11-374c3ba8e25c": "comp-mototaller"
+    "68e81b60-555f-47eb-bd11-374c3ba8e25c": "comp-mototaller",
+    "448c0d81-2fed-4fcc-9d97-0d6bbd4d2f15": "comp-mototaller"
   },
   "productCompanies": {
     "dd5d434d-066b-499a-abd4-cfa04cb7c543": "comp-ferromax-3613",

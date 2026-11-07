@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@source "../";
 
 :root {
   /* Nueva Paleta Minimal Dashboard Colors (WhatsApp) */
