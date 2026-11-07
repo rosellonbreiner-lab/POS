@@ -9,6 +9,7 @@ export function middleware(request: NextRequest) {
     host.includes("localhost") ||
     host.includes("127.0.0.1") ||
     host.includes("trycloudflare.com") ||
+    host.includes("ngrok") ||
     /^192\.168\./.test(host) ||
     /^10\./.test(host) ||
     /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(host);

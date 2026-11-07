@@ -4,14 +4,25 @@ import fs from 'fs';
 import readline from 'readline';
 import QRCode from 'qrcode';
 import https from 'https';
-import http from 'http';
 
 const isWin = process.platform === 'win32';
-const cloudflaredExe = path.join(process.cwd(), 'bin', isWin ? 'cloudflared.exe' : 'cloudflared');
 
-if (!fs.existsSync(cloudflaredExe)) {
-  console.error('[ERROR] No se encontró el binario de Cloudflare Tunnel en:', cloudflaredExe);
-  process.exit(1);
+// Cargar variables de entorno desde .env manualmente
+const envPath = path.join(process.cwd(), '.env');
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf-8');
+  for (const line of envContent.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx > 0) {
+      const key = trimmed.slice(0, eqIdx).trim();
+      const val = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, '');
+      if (!process.env[key]) {
+        process.env[key] = val;
+      }
+    }
+  }
 }
 
 // 1. Función para verificar si el servidor local ya está respondiendo
@@ -39,6 +50,43 @@ function checkServerReady(port = 3000) {
   });
 }
 
+async function showBanner(tunnelUrl, isPermanent = false) {
+  fs.writeFileSync(path.join(process.cwd(), 'tunnel-url.txt'), tunnelUrl);
+
+  let qrText = '';
+  try {
+    qrText = await QRCode.toString(tunnelUrl, { type: 'terminal', small: true });
+  } catch (e) {
+    qrText = '';
+  }
+
+  console.log('\n' + '='.repeat(70));
+  if (isPermanent) {
+    console.log('  🚀 MOTOTALLER - EN LÍNEA CON ENLACE FIJO PERMANENTE (NGROK)');
+  } else {
+    console.log('  🚀 MOTOTALLER - EN LÍNEA CON CLOUDFLARE TUNNEL');
+  }
+  console.log('='.repeat(70));
+  console.log('\n  📱 ENLACE OFICIAL PARA TU CELULAR (Guárdalo en Favoritos):');
+  console.log('     (Funciona en cualquier Wi-Fi o datos 4G/5G, nunca cambia)\n');
+  console.log(`     👉 \x1b[36m\x1b[1m${tunnelUrl}\x1b[0m\n`);
+
+  if (qrText) {
+    console.log('  📷 O escanea este código QR con la cámara de tu celular:');
+    console.log(qrText);
+  }
+
+  console.log('  💻 ACCESO DIRECTO EN ESTA COMPUTADORA:');
+  console.log('     👉 \x1b[32mhttps://localhost:3000\x1b[0m\n');
+  console.log('='.repeat(70));
+  console.log('  [El sistema está en funcionamiento. Presiona Ctrl + C para detener]');
+  console.log('='.repeat(70) + '\n');
+
+  if (isWin) {
+    spawn('cmd.exe', ['/c', 'start', 'https://localhost:3000'], { detached: true, stdio: 'ignore' });
+  }
+}
+
 async function main() {
   console.clear?.();
   console.log('='.repeat(65));
@@ -60,21 +108,9 @@ async function main() {
       shell: true,
     });
 
-    nextProcess.stdout.on('data', (d) => {
-      const text = d.toString();
-      if (text.includes('Ready in') || text.includes('Compiled')) {
-        // Silencioso o log sutil
-      }
-    });
+    nextProcess.stdout.on('data', () => {});
+    nextProcess.stderr.on('data', () => {});
 
-    nextProcess.stderr.on('data', (d) => {
-      const err = d.toString();
-      if (!err.includes('Self-signed') && !err.includes('ExperimentalWarning')) {
-        // Solo mostrar errores reales
-      }
-    });
-
-    // Esperar hasta que responda el puerto 3000
     let ready = false;
     for (let i = 0; i < 30; i++) {
       await new Promise((r) => setTimeout(r, 1000));
@@ -83,14 +119,54 @@ async function main() {
     }
 
     if (!ready) {
-      console.log('[!] El servidor está tardando en responder, intentando conectar túnel...');
+      console.log('[!] Esperando a que el servidor termine de inicializar...');
     } else {
       console.log('[OK] Servidor Next.js listo y activo.');
     }
   }
 
-  // 2. Iniciar Cloudflare Tunnel
-  console.log('[*] Abriendo túnel seguro de Cloudflare (candado verde oficial)...');
+  const ngrokToken = process.env.NGROK_AUTHTOKEN;
+  const ngrokDomain = process.env.NGROK_DOMAIN;
+
+  // PRIORIDAD 1: NGROK CON DOMINIO FIJO PERMANENTE
+  if (ngrokToken && ngrokDomain) {
+    try {
+      console.log(`[*] Conectando a tu dominio fijo ngrok (${ngrokDomain})...`);
+      const ngrok = await import('@ngrok/ngrok');
+      const listener = await ngrok.default.forward({
+        addr: 'https://localhost:3000',
+        authtoken: ngrokToken,
+        domain: ngrokDomain,
+        verify_upstream_tls: false,
+      });
+
+      const tunnelUrl = listener.url();
+      await showBanner(tunnelUrl, true);
+
+      // Mantener proceso vivo indefinidamente con timer activo
+      const keepAlive = setInterval(() => {}, 1000 * 60 * 60);
+
+      process.on('SIGINT', async () => {
+        console.log('\n[*] Deteniendo túnel ngrok y servicios...');
+        clearInterval(keepAlive);
+        try { await listener.close(); } catch {}
+        if (nextProcess) { try { nextProcess.kill(); } catch {} }
+        process.exit(0);
+      });
+      return;
+    } catch (err) {
+      console.warn('[!] Error conectando con ngrok, usando Cloudflare como respaldo:', err?.message || err);
+    }
+  }
+
+  // PRIORIDAD 2: CLOUDFLARE TUNNEL (Fallback)
+  console.log('[*] Abriendo túnel seguro Cloudflare...');
+  const cloudflaredExe = path.join(process.cwd(), 'bin', isWin ? 'cloudflared.exe' : 'cloudflared');
+
+  if (!fs.existsSync(cloudflaredExe)) {
+    console.error('[ERROR] No se encontró binario de túnel en:', cloudflaredExe);
+    process.exit(1);
+  }
 
   const tunnel = spawn(
     cloudflaredExe,
@@ -111,49 +187,13 @@ async function main() {
     const match = line.match(/(https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com)/);
     if (match && !tunnelUrl) {
       tunnelUrl = match[1];
-      fs.writeFileSync(path.join(process.cwd(), 'tunnel-url.txt'), tunnelUrl);
-
-      // Generar código QR para terminal
-      let qrText = '';
-      try {
-        qrText = await QRCode.toString(tunnelUrl, { type: 'terminal', small: true });
-      } catch (e) {
-        qrText = '';
-      }
-
-      console.log('\n' + '='.repeat(70));
-      console.log('  🚀 SISTEMA MOTOTALLER CONECTADO EXITOSAMENTE A LA RED GLOBAL');
-      console.log('='.repeat(70));
-      console.log('\n  📱 PARA ENTRAR DESDE TU CELULAR:');
-      console.log('     (Funciona en cualquier Wi-Fi o datos 4G/5G, con candado verde)\n');
-      console.log(`     👉 ${tunnelUrl}\n`);
-
-      if (qrText) {
-        console.log('  📷 Escanea este código QR con la cámara de tu celular:');
-        console.log(qrText);
-      }
-
-      console.log('  💻 ACCESO DIRECTO EN ESTA COMPUTADORA:');
-      console.log('     👉 https://localhost:3000\n');
-      console.log('='.repeat(70));
-      console.log('  [Presiona Ctrl + C en esta ventana para detener los servicios]');
-      console.log('='.repeat(70) + '\n');
-
-      // Abrir en el navegador local
-      if (isWin) {
-        spawn('cmd.exe', ['/c', 'start', 'https://localhost:3000'], { detached: true, stdio: 'ignore' });
-      }
+      await showBanner(tunnelUrl, false);
     }
   }
 
   readline.createInterface({ input: tunnel.stdout }).on('line', onLine);
   readline.createInterface({ input: tunnel.stderr }).on('line', onLine);
 
-  tunnel.on('exit', (code) => {
-    console.log(`\n[!] El túnel de Cloudflare se cerró (código ${code}).`);
-  });
-
-  // Limpieza al salir
   function cleanExit() {
     console.log('\n[*] Deteniendo servicios...');
     try { tunnel.kill(); } catch {}

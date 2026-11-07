@@ -102,6 +102,10 @@ const devOrigins: string[] = [
   "127.0.0.1",
   "127.0.0.1:3000",
   "*.trycloudflare.com",
+  "*.ngrok-free.app",
+  "*.ngrok-free.dev",
+  "*.ngrok.app",
+  "finished-lucia-transpersonally.ngrok-free.dev",
 ];
 
 try {
