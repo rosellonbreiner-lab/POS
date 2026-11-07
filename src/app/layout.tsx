@@ -49,8 +49,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}>
-      <body className="antialiased selection:bg-[#5AA9E6]/30 selection:text-[#5AA9E6]">
+    <html
+      lang="es"
+      suppressHydrationWarning
+      className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
+    >
+      <body
+        suppressHydrationWarning
+        className="antialiased selection:bg-[#5AA9E6]/30 selection:text-[#5AA9E6]"
+      >
         {children}
         <PwaInstallPrompt />
       </body>
