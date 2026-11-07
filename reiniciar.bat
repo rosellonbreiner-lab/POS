@@ -16,3 +16,4 @@ timeout /t 2 /nobreak >nul
 
 echo [*] Iniciando servicios de nuevo...
 call start.bat
+

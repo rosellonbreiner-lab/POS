@@ -12,7 +12,7 @@ for (const devName in interfaces) {
   const iface = interfaces[devName];
   if (!iface) continue;
   for (const alias of iface) {
-    if (alias.family === 'IPv4' && !alias.internal) {
+    if (alias.family === 'IPv4' && !alias.internal && !alias.address.startsWith('169.254')) {
       ips.push(alias.address);
     }
   }

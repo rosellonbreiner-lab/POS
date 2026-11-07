@@ -4,6 +4,13 @@ import type { NextRequest } from "next/server";
 export function middleware(request: NextRequest) {
   const response = NextResponse.next();
   const isProd = process.env.NODE_ENV === "production";
+  const host = request.headers.get("host") || "";
+  const isLocalOrIp =
+    host.includes("localhost") ||
+    host.includes("127.0.0.1") ||
+    /^192\.168\./.test(host) ||
+    /^10\./.test(host) ||
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(host);
 
   // OWASP ASVS & Google Safe Browsing 2026 Hardening Headers
   response.headers.set("X-Frame-Options", "DENY");
@@ -13,12 +20,17 @@ export function middleware(request: NextRequest) {
     "Permissions-Policy",
     "camera=(self), microphone=(), geolocation=(), payment=(), browsing-topics=()"
   );
-  response.headers.set(
-    "Strict-Transport-Security",
-    "max-age=31536000; includeSubDomains; preload"
-  );
-  response.headers.set("Cross-Origin-Opener-Policy", "same-origin");
-  response.headers.set("Cross-Origin-Resource-Policy", "same-origin");
+
+  // HSTS y Aislamiento de Origen SOLO en producción con dominios reales (RFC 6797 prohíbe HSTS en IPs)
+  if (isProd && !isLocalOrIp) {
+    response.headers.set(
+      "Strict-Transport-Security",
+      "max-age=31536000; includeSubDomains; preload"
+    );
+    response.headers.set("Cross-Origin-Opener-Policy", "same-origin");
+    response.headers.set("Cross-Origin-Resource-Policy", "same-origin");
+  }
+
   response.headers.set("X-Permitted-Cross-Domain-Policies", "none");
   response.headers.set("X-XSS-Protection", "0");
 
@@ -45,7 +57,7 @@ export function middleware(request: NextRequest) {
   ];
   response.headers.set("Content-Security-Policy", cspDirectives.join("; "));
 
-  // Políticas de control de caché estrictas para prevenir almacenamiento de datos comerciales en navegadores o proxies
+  // Políticas de control de caché para prevenir almacenamiento no deseado
   response.headers.set(
     "Cache-Control",
     "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
@@ -60,8 +72,8 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Aplica a todas las rutas excepto archivos estáticos compilados e imágenes públicas
+     * Aplica a todas las rutas excepto archivos estáticos compilados, PWA assets e imágenes públicas
      */
-    "/((?!_next/static|_next/image|favicon.ico).*)",
+    "/((?!_next/static|_next/image|favicon.ico|manifest.json|sw.js|icons/).*)",
   ],
 };

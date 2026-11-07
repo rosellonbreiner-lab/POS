@@ -151,15 +151,18 @@ export default function DashboardPage() {
   const [availableCompanies, setAvailableCompanies] = useState<any[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("comp-mototaller");
 
-  // 1. Verificar sesión con timeout de protección para móviles
+  // 1. Verificar sesión con timeout ultrarrápido para móviles (400ms)
   useEffect(() => {
     let isMounted = true;
     const fallbackTimer = setTimeout(() => {
       if (isMounted) setCheckingAuth(false);
-    }, 1500);
+    }, 400);
 
     fetch("/api/auth/me", { cache: "no-store" })
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
       .then((data) => {
         if (isMounted && data?.user) {
           setUser(data.user);
@@ -176,7 +179,8 @@ export default function DashboardPage() {
         }
       })
       .catch((err) => {
-        console.warn("Auth check warning:", err);
+        // En conexiones iniciales o sin sesión, proceder de inmediato al login
+        console.info("Auth check completado:", err?.message || err);
       })
       .finally(() => {
         if (isMounted) {

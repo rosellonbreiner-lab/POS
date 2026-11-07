@@ -30,11 +30,15 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM 4. Detectar la direccion IP local de la conexion actual
+REM 4. Detectar la direccion IP local de la conexion actual via Node.js
 set LOCAL_IP=127.0.0.1
-for /f "tokens=*" %%i in ('powershell -NoProfile -Command "(Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -like '192.168.*' -or $_.IPAddress -like '10.*' }).IPAddress | Select-Object -First 1"') do (
+for /f "tokens=*" %%i in ('node -e "const os = require('os'); const nets = os.networkInterfaces(); for (const k in nets) { for (const n of nets[k]) { if (n.family === 'IPv4' && !n.internal && !n.address.startsWith('169.254')) { console.log(n.address); process.exit(0); } } } console.log('127.0.0.1');"') do (
     set LOCAL_IP=%%i
 )
+
+REM 4.1. Generar o actualizar certificados SSL para la IP de esta red
+echo [*] Verificando certificados SSL para IP !LOCAL_IP!
+call node scripts/generate-cert.mjs >nul 2>&1
 
 REM 5. Verificar si el servidor ya esta en ejecucion en el puerto 3000
 set SERVER_RUNNING=0

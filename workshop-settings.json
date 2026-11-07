@@ -19,7 +19,13 @@
       "receiptMessage": "¡Gracias por confiar en nosotros! Garantía de 30 días en repuestos con este ticket.",
       "primaryColor": "#5AA9E6",
       "secondaryColor": "#1F3A5F",
-      "createdAt": "2026-10-28T00:00:00.000Z"
+      "createdAt": "2026-10-28T00:00:00.000Z",
+      "printConfig": {
+        "paperFormat": "TM_U220",
+        "printWidth": "66mm",
+        "marginLeft": "5mm",
+        "fontSize": "11.5px"
+      }
     },
     {
       "id": "comp-ferromax-3613",
@@ -33,7 +39,13 @@
       "receiptMessage": "¡Gracias por su compra! Vuelva pronto.",
       "primaryColor": "#F97316",
       "secondaryColor": "#7C2D12",
-      "createdAt": "2026-11-03T19:14:43.613Z"
+      "createdAt": "2026-11-03T19:14:43.613Z",
+      "printConfig": {
+        "paperFormat": "TM_U220",
+        "printWidth": "66mm",
+        "marginLeft": "5mm",
+        "fontSize": "11.5px"
+      }
     }
   ],
   "userCompanies": {
@@ -103,8 +115,8 @@
     "enabled": true,
     "intervalHours": 24,
     "maxBackupsToKeep": 7,
-    "lastBackupAt": "2026-11-04T21:22:14.171Z",
-    "nextBackupAt": "2026-11-05T21:22:14.278Z"
+    "lastBackupAt": "2026-11-07T14:54:59.570Z",
+    "nextBackupAt": "2026-11-08T14:54:59.684Z"
   },
   "authorCredit": {
     "enabled": true,

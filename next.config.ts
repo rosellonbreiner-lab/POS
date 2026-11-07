@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import os from "os";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -29,10 +30,22 @@ const securityHeaders = [
     key: "X-DNS-Prefetch-Control",
     value: "on",
   },
-  {
-    key: "Strict-Transport-Security",
-    value: "max-age=31536000; includeSubDomains; preload",
-  },
+  ...(isProd
+    ? [
+        {
+          key: "Strict-Transport-Security",
+          value: "max-age=31536000; includeSubDomains; preload",
+        },
+        {
+          key: "Cross-Origin-Opener-Policy",
+          value: "same-origin",
+        },
+        {
+          key: "Cross-Origin-Resource-Policy",
+          value: "same-origin",
+        },
+      ]
+    : []),
   {
     key: "X-Frame-Options",
     value: "DENY",
@@ -48,14 +61,6 @@ const securityHeaders = [
   {
     key: "Permissions-Policy",
     value: "camera=(self), microphone=(), geolocation=(), payment=()",
-  },
-  {
-    key: "Cross-Origin-Opener-Policy",
-    value: "same-origin",
-  },
-  {
-    key: "Cross-Origin-Resource-Policy",
-    value: "same-origin",
   },
   {
     key: "Content-Security-Policy",
@@ -90,14 +95,34 @@ const apiCacheHeaders = [
   },
 ];
 
+// Detectar dinámicamente todas las IPs locales activas para permitir HMR y conexiones desde celular
+const devOrigins: string[] = [
+  "localhost",
+  "localhost:3000",
+  "127.0.0.1",
+  "127.0.0.1:3000",
+];
+
+try {
+  const ifaces = os.networkInterfaces();
+  for (const ifName in ifaces) {
+    const ifList = ifaces[ifName];
+    if (ifList) {
+      for (const item of ifList) {
+        if (item.family === "IPv4" && !item.internal) {
+          devOrigins.push(item.address);
+          devOrigins.push(`${item.address}:3000`);
+        }
+      }
+    }
+  }
+} catch {
+  // Fallback silencioso si os.networkInterfaces no está disponible
+}
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  allowedDevOrigins: [
-    "192.168.1.215",
-    "192.168.1.215:3000",
-    "localhost",
-    "localhost:3000",
-  ],
+  allowedDevOrigins: devOrigins,
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {

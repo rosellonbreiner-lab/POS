@@ -18,17 +18,22 @@ export function PwaInstallPrompt() {
   const [installedSuccess, setInstalledSuccess] = useState(false);
 
   useEffect(() => {
-    // 1. Registrar Service Worker oficial de inmediato sin esperar si el documento ya cargó
+    // 1. Registrar Service Worker oficial de forma segura
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
       const registerSW = () => {
-        navigator.serviceWorker
-          .register("/sw.js", { scope: "/" })
-          .then((reg) => {
-            console.log("[PWA] Service Worker registrado con scope:", reg.scope);
-          })
-          .catch((err) => {
-            console.warn("[PWA] Error al registrar Service Worker:", err);
-          });
+        try {
+          navigator.serviceWorker
+            .register("/sw.js", { scope: "/" })
+            .then((reg) => {
+              console.log("[PWA] Service Worker registrado con scope:", reg.scope);
+            })
+            .catch((err) => {
+              // Certificados autofirmados en IPs locales pueden emitir advertencia segura
+              console.info("[PWA] Nota Service Worker:", err?.message || err);
+            });
+        } catch {
+          // Ignorar error síncrono si el navegador rechaza registrar SW en IP local
+        }
       };
 
       if (document.readyState === "complete" || document.readyState === "interactive") {
