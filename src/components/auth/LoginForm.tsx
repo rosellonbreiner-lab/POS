@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { SystemDashboardAnime } from "./SystemDashboardAnime";
 import { LoginSecurityBadge } from "./LoginSecurityBadge";
+import { PwaInstallPrompt } from "@/components/common/PwaInstallPrompt";
 
 interface LoginPageProps {
   onLoginSuccess: (user: any) => void;
@@ -235,6 +236,9 @@ export function LoginForm({ onLoginSuccess }: LoginPageProps) {
           </a>
         )}
       </footer>
+
+      {/* Cartel de instalación en el celular exclusivamente visible en el Login */}
+      <PwaInstallPrompt />
     </div>
   );
 }

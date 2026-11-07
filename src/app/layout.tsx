@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google";
-import { PwaInstallPrompt } from "@/components/common/PwaInstallPrompt";
 import "./globals.css";
 
 const inter = Inter({
@@ -59,7 +58,6 @@ export default function RootLayout({
         className="antialiased selection:bg-[#5AA9E6]/30 selection:text-[#5AA9E6]"
       >
         {children}
-        <PwaInstallPrompt />
       </body>
     </html>
   );
