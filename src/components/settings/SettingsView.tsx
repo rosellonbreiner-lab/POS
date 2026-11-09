@@ -787,10 +787,12 @@ export function SettingsView({ user, onRefreshGlobal }: SettingsViewProps) {
     motoModel: "Bajaj Boxer CT 100",
     paymentType: "EFECTIVO",
     items: [
-      { name: "Kit de Arrastre Boxer CT 100 428H", quantity: 1, unitPrice: 65000, total: 65000 },
+      { name: "Kit de Arrastre Boxer CT 100 428H", quantity: 1, unitPrice: 65000, regularPrice: 70000, total: 65000 },
       { name: "Aceite Motul 3000 4T 20W50 Mineral 1L", quantity: 1, unitPrice: 35000, total: 35000 },
       { name: "Bujía NGK C7HSA", quantity: 1, unitPrice: 13000, total: 13000 },
     ],
+    subtotal: 118000,
+    discount: 5000,
     total: 113000,
     workshopConfig: config,
   };

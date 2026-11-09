@@ -549,6 +549,9 @@ export default function DashboardPage() {
 
   const handlePrintInvoiceTicket = (inv: any) => {
     if (!inv) return;
+    const invDiscount = Number(inv.discount) || 0;
+    const invSubtotal = Number(inv.subtotal) || (Number(inv.total) + invDiscount);
+
     const ticketData: TicketData = {
       type: "VENTA",
       consecutive: inv.consecutive,
@@ -556,12 +559,20 @@ export default function DashboardPage() {
       customerName: inv.customer?.name || "Consumidor Final",
       customerPhone: inv.customer?.phone || undefined,
       paymentType: inv.paymentType || "EFECTIVO",
-      items: (inv.items || []).map((i: any) => ({
-        name: i.product?.name || i.description || "Repuesto",
-        quantity: i.quantity,
-        unitPrice: i.unitPrice,
-        total: i.totalPrice || i.unitPrice * i.quantity,
-      })),
+      items: (inv.items || []).map((i: any) => {
+        const prodSalePrice = i.product?.salePrice;
+        const regPrice = i.regularPrice || (prodSalePrice && prodSalePrice > i.unitPrice ? prodSalePrice : undefined);
+        return {
+          name: i.product?.name || i.description || "Repuesto",
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+          regularPrice: regPrice,
+          discount: i.discount || (regPrice ? Math.max(0, regPrice - i.unitPrice) * i.quantity : 0),
+          total: i.totalPrice || i.unitPrice * i.quantity,
+        };
+      }),
+      subtotal: invSubtotal,
+      discount: invDiscount,
       total: inv.total,
       workshopConfig: activeCompany || workshopConfig || {
         name: "MotoTaller Maicao",

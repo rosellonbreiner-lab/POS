@@ -150,6 +150,12 @@ export async function PATCH(
         const nextInvoiceConsecutive = lastInvoice ? lastInvoice.consecutive + 1 : 1001;
 
         const totalVenta = order.items.reduce((acc, i) => acc + i.totalPrice, 0);
+        const regularTotal = order.items.reduce((acc, i) => {
+          const reg = i.product?.salePrice || i.unitPrice;
+          return acc + (reg * i.quantity);
+        }, 0);
+        const orderDiscount = Math.max(0, regularTotal - totalVenta);
+        const finalSubtotal = orderDiscount > 0 ? regularTotal : totalVenta;
 
         const isCredit = paymentType === "CREDITO";
 
@@ -160,8 +166,9 @@ export async function PATCH(
             customerId: order.customerId,
             userId: user.id,
             status: isCredit ? "PENDIENTE" : "PAGADA",
-            subtotal: totalVenta,
+            subtotal: finalSubtotal,
             taxAmount: Math.round(totalVenta * 0.19),
+            discount: orderDiscount,
             total: totalVenta,
             paymentType: paymentType || "EFECTIVO",
             items: {

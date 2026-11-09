@@ -108,6 +108,7 @@ export function SalesView({
   const stats = useMemo(() => {
     const count = filteredInvoices.length;
     const totalCobrado = filteredInvoices.reduce((sum, inv) => sum + inv.total, 0);
+    const totalDescuentos = filteredInvoices.reduce((sum, inv) => sum + (Number(inv.discount) || 0), 0);
     const efectivo = filteredInvoices
       .filter((i) => i.paymentType === "EFECTIVO")
       .reduce((sum, i) => sum + i.total, 0);
@@ -118,7 +119,7 @@ export function SalesView({
       .filter((i) => i.paymentType === "CREDITO")
       .reduce((sum, i) => sum + i.total, 0);
 
-    return { count, totalCobrado, efectivo, transferencia, credito };
+    return { count, totalCobrado, totalDescuentos, efectivo, transferencia, credito };
   }, [filteredInvoices]);
 
   // Facturas de hoy para el indicador rápido
@@ -265,6 +266,17 @@ export function SalesView({
             ${stats.credito.toLocaleString("es-CO")} COP
           </div>
         </div>
+
+        {stats.totalDescuentos > 0 && (
+          <div className="p-3 rounded-xl bg-yellow-400/10 border border-yellow-400/30 sm:col-span-2 lg:col-span-4 flex items-center justify-between text-xs">
+            <span className="text-yellow-400 font-semibold flex items-center gap-1.5">
+              <span>🏷️</span> Total Descuentos Otorgados en este período:
+            </span>
+            <span className="font-bold text-yellow-400 tabular-nums text-sm">
+              -${stats.totalDescuentos.toLocaleString("es-CO")} COP
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Tabla Principal de Facturas */}
@@ -353,7 +365,12 @@ export function SalesView({
                         })}
                       </td>
                       <td className="py-2.5 text-right font-bold text-white tabular-nums">
-                        ${inv.total.toLocaleString("es-CO")} COP
+                        <div>${inv.total.toLocaleString("es-CO")} COP</div>
+                        {Number(inv.discount) > 0 && (
+                          <div className="text-[10px] text-yellow-400 font-semibold bg-yellow-400/10 px-1.5 py-0.5 rounded inline-block mt-0.5 border border-yellow-400/20">
+                            Desc: -${Number(inv.discount).toLocaleString("es-CO")}
+                          </div>
+                        )}
                       </td>
                       <td className="py-2.5 text-right">
                         <div className="flex items-center justify-end gap-1.5">

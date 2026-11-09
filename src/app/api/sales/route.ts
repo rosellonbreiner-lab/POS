@@ -126,7 +126,11 @@ export async function POST(request: Request) {
         taxAmount += Math.round((lineTotal * (item.taxRate || 19)) / 100);
       }
 
-      const total = subtotal;
+      // Cálculo transparente de descuento aplicado a la factura
+      const explicitDiscount = Number(body.discount) || 0;
+      const finalDiscount = explicitDiscount > 0 ? explicitDiscount : 0;
+      const finalSubtotal = body.subtotal ? Number(body.subtotal) : (subtotal + finalDiscount);
+      const total = body.total !== undefined ? Number(body.total) : Math.max(0, finalSubtotal - finalDiscount);
 
       // 3. Consecutivo único
       const lastInv = await tx.invoice.findFirst({
@@ -143,9 +147,9 @@ export async function POST(request: Request) {
           customerId: customer.id,
           userId: user.id,
           status: isCredit ? "PENDIENTE" : "PAGADA",
-          subtotal,
+          subtotal: finalSubtotal,
           taxAmount,
-          discount: 0,
+          discount: finalDiscount,
           total,
           paymentType: body.paymentType || "EFECTIVO",
           items: {

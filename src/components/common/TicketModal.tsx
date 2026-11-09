@@ -9,6 +9,8 @@ export interface TicketItem {
   name: string;
   quantity: number;
   unitPrice: number;
+  regularPrice?: number;
+  discount?: number;
   total: number;
 }
 
@@ -39,6 +41,8 @@ export interface TicketData {
   plate?: string;
   motoModel?: string;
   items?: TicketItem[];
+  subtotal?: number;
+  discount?: number;
   total: number;
   paymentType?: string;
   creditInfo?: TicketCreditInfo;
@@ -368,36 +372,73 @@ export function TicketModal({
             </div>
 
             <div className="space-y-1.5">
-              {(data.items || []).map((item, idx) => (
-                <div key={idx} className="flex justify-between items-start leading-tight text-black border-b border-black/10 pb-0.5">
-                  <div className="w-[50%] pr-1 break-words [overflow-wrap:anywhere] [word-break:break-word]">
-                    <div className="font-bold break-words [overflow-wrap:anywhere] [word-break:break-word] whitespace-normal leading-snug">
-                      {item.name}
+              {(data.items || []).map((item, idx) => {
+                const hasItemDiscount = Boolean(
+                  (item.regularPrice && item.regularPrice > item.unitPrice) ||
+                  (item.discount && item.discount > 0)
+                );
+                return (
+                  <div key={idx} className="flex justify-between items-start leading-tight text-black border-b border-black/10 pb-0.5">
+                    <div className="w-[50%] pr-1 break-words [overflow-wrap:anywhere] [word-break:break-word]">
+                      <div className="font-bold break-words [overflow-wrap:anywhere] [word-break:break-word] whitespace-normal leading-snug">
+                        {item.name}
+                      </div>
+                      <div className="text-[0.85em] font-bold font-mono text-black whitespace-normal break-words">
+                        ${item.unitPrice.toLocaleString("es-CO")} c/u
+                        {hasItemDiscount && item.regularPrice && (
+                          <span className="text-[0.8em] font-bold text-black/80 ml-1">
+                            (Antes: ${item.regularPrice.toLocaleString("es-CO")})
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-[0.85em] font-bold font-mono text-black whitespace-normal break-words">
-                      ${item.unitPrice.toLocaleString("es-CO")} c/u
+                    <div className="w-[16%] text-center font-bold font-mono shrink-0 pt-0.5">
+                      {item.quantity}
+                    </div>
+                    <div className="w-[34%] text-right font-black font-mono shrink-0 break-words [overflow-wrap:anywhere] pt-0.5">
+                      ${item.total.toLocaleString("es-CO")}
                     </div>
                   </div>
-                  <div className="w-[16%] text-center font-bold font-mono shrink-0 pt-0.5">
-                    {item.quantity}
-                  </div>
-                  <div className="w-[34%] text-right font-black font-mono shrink-0 break-words [overflow-wrap:anywhere] pt-0.5">
-                    ${item.total.toLocaleString("es-CO")}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
           <div className="border-b-2 border-black my-1.5"></div>
 
+          {/* Subtotal y Descuento Claro en Factura */}
+          {Number(data.discount) > 0 && (
+            <div className="space-y-0.5 py-0.5 text-black text-[0.95em]">
+              <div className="flex justify-between items-center font-bold">
+                <span className="break-words [overflow-wrap:anywhere]">SUBTOTAL:</span>
+                <span className="font-mono ml-auto">
+                  ${(Number(data.subtotal) && Number(data.subtotal) > Number(data.total)
+                    ? Number(data.subtotal)
+                    : Number(data.total) + Number(data.discount)
+                  ).toLocaleString("es-CO")}
+                </span>
+              </div>
+              <div className="flex justify-between items-center font-black">
+                <span className="break-words [overflow-wrap:anywhere]">DESCUENTO:</span>
+                <span className="font-mono ml-auto">-${Number(data.discount).toLocaleString("es-CO")}</span>
+              </div>
+            </div>
+          )}
+
           {/* Total General con salto de renglón si es necesario */}
-          <div className="flex flex-wrap justify-between items-center font-black text-[1.15em] border-t-2 border-b-2 border-black py-1 my-1.5 text-black gap-x-1">
+          <div className="flex flex-wrap justify-between items-center font-black text-[1.15em] border-t-2 border-b-2 border-black py-1 my-1 text-black gap-x-1">
             <span className="break-words [overflow-wrap:anywhere]">TOTAL A PAGAR:</span>
             <span className="font-mono ml-auto break-words [overflow-wrap:anywhere]">
               ${data.total.toLocaleString("es-CO")}
             </span>
           </div>
+
+          {/* Mensaje de ahorro para fidelizar al cliente */}
+          {Number(data.discount) > 0 && (
+            <div className="text-center font-black text-[0.85em] border-2 border-black border-dashed py-1 my-1">
+              *** USTED AHORRÓ: ${Number(data.discount).toLocaleString("es-CO")} ***
+            </div>
+          )}
         </>
       )}
 

@@ -559,7 +559,12 @@ export function CashAccountingView({
                                 )}
                               </td>
                               <td className="py-2 text-right font-bold text-white tabular-nums">
-                                ${inv.total.toLocaleString("es-CO")} COP
+                                <div>${inv.total.toLocaleString("es-CO")} COP</div>
+                                {Number(inv.discount) > 0 && (
+                                  <div className="text-[10px] text-yellow-400 font-semibold">
+                                    Desc: -${Number(inv.discount).toLocaleString("es-CO")}
+                                  </div>
+                                )}
                               </td>
                             </tr>
                           ))}
