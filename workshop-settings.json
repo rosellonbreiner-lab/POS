@@ -57,11 +57,16 @@
   },
   "invoiceCompanies": {
     "68e81b60-555f-47eb-bd11-374c3ba8e25c": "comp-mototaller",
-    "448c0d81-2fed-4fcc-9d97-0d6bbd4d2f15": "comp-mototaller"
+    "448c0d81-2fed-4fcc-9d97-0d6bbd4d2f15": "comp-mototaller",
+    "5a7a8310-cc83-4b92-bbc9-6ab83dc61f99": "comp-mototaller",
+    "902e71b1-57fb-4765-91cc-b974a05278b6": "comp-mototaller"
   },
   "productCompanies": {
     "dd5d434d-066b-499a-abd4-cfa04cb7c543": "comp-ferromax-3613",
-    "5fc6a294-4867-44d3-9926-b6cfc0a741d2": "comp-mototaller"
+    "5fc6a294-4867-44d3-9926-b6cfc0a741d2": "comp-mototaller",
+    "ba3a30af-5740-43a5-9f9f-82dcf27c1049": "ALL",
+    "51405112-a7c8-4d8f-b47d-82cfac3416b7": "comp-mototaller",
+    "3dc8447e-771c-44ac-9ffa-12cb15702b0a": "comp-mototaller"
   },
   "orderCompanies": {},
   "quoteCompanies": {},
