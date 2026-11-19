@@ -6,7 +6,6 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
 from docx.oxml import OxmlElement, parse_xml
 from docx.oxml.ns import qn, nsdecls
-from docx2pdf import convert
 
 def create_element(name):
     return OxmlElement(name)
@@ -138,7 +137,6 @@ def add_callout(doc, text, title="NOTA IMPORTANTE / REGLA DE NEGOCIO", border_co
     r_body.font.size = Pt(9.5)
     r_body.font.color.rgb = COLOR_DARK_SLATE
     
-    # spacing after table
     sp_p = doc.add_paragraph()
     sp_p.paragraph_format.space_after = Pt(4)
 
@@ -191,4 +189,22 @@ def add_table_data(doc, headers, data, col_widths=None):
     sp.paragraph_format.space_after = Pt(6)
     return tbl
 
-print("Base library configured!")
+def add_diagram(doc, image_path, caption, width=Inches(6.2)):
+    if os.path.exists(image_path):
+        p_img = doc.add_paragraph()
+        p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p_img.paragraph_format.space_before = Pt(10)
+        p_img.paragraph_format.space_after = Pt(4)
+        run_img = p_img.add_run()
+        run_img.add_picture(image_path, width=width)
+        
+        p_cap = doc.add_paragraph()
+        p_cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p_cap.paragraph_format.space_after = Pt(12)
+        r_cap = p_cap.add_run(caption)
+        r_cap.font.name = 'Arial'
+        r_cap.font.size = Pt(9)
+        r_cap.font.italic = True
+        r_cap.font.color.rgb = COLOR_MUTED_GRAY
+    else:
+        print(f"Advertencia: no se encontró la imagen en {image_path}")

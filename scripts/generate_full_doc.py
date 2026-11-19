@@ -7,7 +7,7 @@ from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx2pdf import convert
 from deliverables_builder import (
     add_heading_1, add_heading_2, add_heading_3,
-    add_p, add_bullet, add_callout, add_table_data,
+    add_p, add_bullet, add_callout, add_table_data, add_diagram,
     COLOR_PRIMARY_NAVY, COLOR_ACCENT_BLUE, COLOR_DARK_SLATE, COLOR_MUTED_GRAY,
     HEX_PRIMARY_NAVY, HEX_ACCENT_BLUE, HEX_LIGHT_BLUE, set_cell_background
 )
@@ -27,7 +27,7 @@ def build_mototaller_deliverables_document():
         header = s.header
         hp = header.paragraphs[0]
         hp.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-        hrun = hp.add_run("MotoTaller POS & Taller  |  Documento de Entregables de Software  |  v2.4.0")
+        hrun = hp.add_run("MotoTaller POS & Taller  |  Documento Maestro de Entregables de Software  |  v2.4.0")
         hrun.font.name = 'Arial'
         hrun.font.size = Pt(8.5)
         hrun.font.color.rgb = COLOR_MUTED_GRAY
@@ -44,7 +44,7 @@ def build_mototaller_deliverables_document():
     # PORTADA EJECUTIVA
     # ==========================================
     p_pre = doc.add_paragraph()
-    p_pre.paragraph_format.space_before = Pt(30)
+    p_pre.paragraph_format.space_before = Pt(25)
     p_pre.alignment = WD_ALIGN_PARAGRAPH.CENTER
     r_pre = p_pre.add_run("INGENIERÍA DE SOFTWARE & GESTIÓN DE SISTEMAS DE INFORMACIÓN")
     r_pre.font.name = 'Arial'
@@ -52,20 +52,20 @@ def build_mototaller_deliverables_document():
     r_pre.font.bold = True
     r_pre.font.color.rgb = COLOR_ACCENT_BLUE
 
-    # Try inserting logo if exists
+    # Cover Logo
     logo_path = os.path.abspath("public/icon-512.png")
     if os.path.exists(logo_path):
         p_logo = doc.add_paragraph()
         p_logo.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p_logo.paragraph_format.space_after = Pt(12)
-        p_logo.paragraph_format.space_before = Pt(10)
+        p_logo.paragraph_format.space_after = Pt(10)
+        p_logo.paragraph_format.space_before = Pt(8)
         run_logo = p_logo.add_run()
         run_logo.add_picture(logo_path, width=Inches(1.5))
 
     p_title = doc.add_paragraph()
     p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p_title.paragraph_format.space_before = Pt(8)
-    p_title.paragraph_format.space_after = Pt(8)
+    p_title.paragraph_format.space_before = Pt(6)
+    p_title.paragraph_format.space_after = Pt(6)
     r_title = p_title.add_run("MOTOTALLER")
     r_title.font.name = 'Arial'
     r_title.font.size = Pt(28)
@@ -74,7 +74,7 @@ def build_mototaller_deliverables_document():
 
     p_sub = doc.add_paragraph()
     p_sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p_sub.paragraph_format.space_after = Pt(16)
+    p_sub.paragraph_format.space_after = Pt(14)
     r_sub = p_sub.add_run("SISTEMA DE GESTIÓN COMERCIAL, PUNTO DE VENTA (POS) Y TALLER DE MOTOCICLETAS")
     r_sub.font.name = 'Arial'
     r_sub.font.size = Pt(13)
@@ -83,8 +83,8 @@ def build_mototaller_deliverables_document():
 
     p_desc = doc.add_paragraph()
     p_desc.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p_desc.paragraph_format.space_after = Pt(24)
-    r_desc = p_desc.add_run("Documento Maestro Integral de Entregables de Software:\nSRS, Arquitectura, Base de Datos, Casos de Uso, Pruebas, Seguridad RBAC, Manuales de Usuario, Despliegue PWA y Acta de Entrega")
+    p_desc.paragraph_format.space_after = Pt(20)
+    r_desc = p_desc.add_run("Documento Maestro Integral de Entregables de Ingeniería de Software:\nSRS, Diagramas UML y de Flujo, Arquitectura en Capas, Base de Datos, Pruebas, Seguridad RBAC, Manual de Usuario, Manual de Administrador, Manual de Instalación y Acta de Entrega")
     r_desc.font.name = 'Arial'
     r_desc.font.size = Pt(10)
     r_desc.font.italic = True
@@ -96,10 +96,11 @@ def build_mototaller_deliverables_document():
         ["Nombre del Software", "MotoTaller - Cloud & Local POS & Workshop ERP"],
         ["Autor / Desarrollador Líder", "Breiner Rosellon"],
         ["Repositorio Git (Público)", "https://github.com/rosellonbreiner-lab/POS"],
-        ["Versión Entregada", "v2.4.0 (Build de Producción PWA + ngrok Tunnel)"],
+        ["Versión Entregada", "v2.4.0 (Build de Producción PWA + ngrok Tunnel + Tickets Térmicos)"],
         ["Stack Tecnológico", "Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4, Prisma ORM, SQLite WAL, Argon2id"],
+        ["Diagramas Incluidos", "Arquitectura (4 Capas), Casos de Uso UML, Flujo POS, Flujo Taller, DER, Despliegue, Secuencia, Estados"],
+        ["Manuales Incluidos", "Manual de Usuario (17 puntos), Manual de Administrador, Manual de Instalación/Despliegue y Solución de Problemas"],
         ["Túnel de Acceso Remoto", "ngrok Fixed Domain (finished-lucia-transpersonally.ngrok-free.dev) / Cloudflare Tunnel"],
-        ["Impresión Soportada", "Tickets térmicos ESC/POS de 80mm y 58mm con código de barras y desglose de descuentos"],
         ["Fecha de Finalización", "Noviembre 2026"],
         ["Estado del Sistema", "100% Funcional, Probado y Listo para Producción"]
     ]
@@ -111,25 +112,27 @@ def build_mototaller_deliverables_document():
     # ÍNDICE GENERAL / TABLA DE CONTENIDO
     # ==========================================
     add_heading_1(doc, "ÍNDICE GENERAL DEL PROYECTO")
-    add_p(doc, "El presente documento formaliza todos los entregables de ingeniería de software requeridos para el diseño, desarrollo, pruebas, seguridad, despliegue y entrega del sistema de información MotoTaller, acorde a los estándares de la industria y la guía maestra de entregables.")
+    add_p(doc, "El presente documento formaliza todos los entregables de ingeniería de software requeridos para el diseño, desarrollo, pruebas, seguridad, despliegue y entrega del sistema de información MotoTaller, integrando diagramas visuales y manuales detallados de operación conforme a la guía maestra de entregables.")
     
     indices = [
-        "1. Planteamiento del Problema, Justificación y Objetivos",
+        "1. Planteamiento del Problema, Justificación y Objetivos del Proyecto",
         "2. Alcance del Sistema, Reglas de Negocio y Viabilidad",
-        "3. Especificación de Requisitos de Software (SRS: RF y RNF)",
-        "4. Actores del Sistema, Historias de Usuario (Scrum) y Matriz RBAC",
-        "5. Especificación Formal de Casos de Uso del Negocio",
-        "6. Arquitectura de Software, Stack Tecnológico y Diagramas",
-        "7. Diccionario de Datos y Modelo de Base de Datos Relacional",
-        "8. Catálogo Completo de APIs y Endpoints REST",
-        "9. Plan de Pruebas de Software, Casos de Prueba e Informe de Resultados",
-        "10. Seguridad de la Información, Hashing y Protección OWASP",
-        "11. Manual de Instalación, Configuración y Despliegue (start.bat y ngrok)",
-        "12. Manual de Usuario y Operación del Sistema",
-        "13. Manual de Solución de Problemas (Troubleshooting y Códigos de Error)",
-        "14. Gestión de Versiones, Repositorio Git Público y Changelog",
-        "15. Plan de Mantenimiento, Copias de Seguridad y Recuperación ante Desastres",
-        "16. Acta Formal de Entrega y Recepción de Software"
+        "3. Especificación de Requisitos de Software (SRS: 16 RF y 10 RNF)",
+        "4. Actores del Sistema, Historias de Usuario (Scrum/BDD) y Matriz RBAC",
+        "5. Especificación Formal de Casos de Uso del Negocio (CU-01 a CU-05)",
+        "6. Arquitectura de Software y Stack Tecnológico Detallado",
+        "7. CATÁLOGO VISUAL DE DIAGRAMAS DE INGENIERÍA DE SOFTWARE:\n   • Figura 1: Diagrama de Arquitectura de Software en Capas\n   • Figura 2: Diagrama de Casos de Uso UML\n   • Figura 3: Diagrama de Flujo del Proceso de Ventas POS y Descuentos\n   • Figura 4: Diagrama de Flujo del Ciclo de Vida y Atención en Taller\n   • Figura 5: Diagrama Entidad-Relación (DER Conceptual)\n   • Figura 6: Diagrama de Despliegue Físico y de Red (Local + Túnel ngrok + Móviles)\n   • Figura 7: Diagrama de Secuencia UML de Facturación en POS\n   • Figura 8: Máquina de Estados de una Orden de Trabajo (WorkOrder)",
+        "8. Diccionario de Datos Completo y Modelo de Base de Datos Relacional",
+        "9. Catálogo Completo de APIs y Endpoints REST",
+        "10. Plan de Pruebas de Software, Casos de Prueba (CP-01 a CP-10) e Informe de Resultados",
+        "11. Seguridad de la Información, Hashing Argon2id y Protección OWASP",
+        "12. MANUAL DE USUARIO Y OPERACIÓN COMPLETO (Estructura de 17 Puntos):\n   • Acceso, Login, Navegación de menús, Facturación POS, Descuentos, Taller, Inventario, Créditos, Caja, Tickets y FAQ",
+        "13. MANUAL DE ADMINISTRADOR DEL SISTEMA (Usuarios, Permisos, Auditoría y Configuración Fiscal)",
+        "14. MANUAL DE INSTALACIÓN, CONFIGURACIÓN Y DESPLIEGUE (Node.js, start.bat, ngrok y PWA)",
+        "15. MANUAL TÉCNICO, DE BASE DE DATOS Y MANTENIMIENTO",
+        "16. MANUAL DE SOLUCIÓN DE PROBLEMAS (Troubleshooting y Códigos de Error)",
+        "17. Gestión de Versiones, Repositorio Git Público y Changelog",
+        "18. Acta Formal de Entrega y Recepción de Software (Firmas de Conformidad)"
     ]
     for idx_item in indices:
         add_bullet(doc, idx_item)
@@ -193,19 +196,13 @@ def build_mototaller_deliverables_document():
     ]
     add_table_data(doc, ["Código", "Regla de Negocio", "Descripción Operativa"], rn_data, [Inches(1.0), Inches(2.2), Inches(3.3)])
 
-    add_heading_2(doc, "2.3 Estudio de Viabilidad")
-    add_bullet(doc, "Viabilidad Técnica: El software se ejecuta sobre tecnologías de estándar mundial (Node.js, React, SQLite WAL), requiriendo hardware estándar (Intel Core i3 o superior, 4 GB RAM) y compatibilidad total con cualquier lector de códigos de barras USB/Bluetooth e impresora térmica ESC/POS.", "Técnica: ")
-    add_bullet(doc, "Viabilidad Operativa: Interfaz intuitiva diseñada en modo oscuro ergonómico con botones táctiles de alto contraste, reduciendo la curva de aprendizaje del personal mecánico y cajeros a menos de 1 hora.", "Operativa: ")
-    add_bullet(doc, "Viabilidad Económica: Costo de licenciamiento $0 COP al basarse en herramientas de código abierto, con un Retorno de Inversión (ROI) estimado en menos de 30 días gracias a la erradicación de fugas de repuestos.", "Económica: ")
-    add_bullet(doc, "Viabilidad Legal: Cumple plenamente con la Ley Estatutaria 1581 de 2012 de Colombia sobre Protección de Datos Personales (Habeas Data) para la información de clientes.", "Legal: ")
-
     doc.add_page_break()
 
     # ==========================================
     # SECCIÓN 3: ESPECIFICACIÓN DE REQUISITOS (SRS)
     # ==========================================
     add_heading_1(doc, "3. ESPECIFICACIÓN DE REQUISITOS DE SOFTWARE (SRS)")
-    add_p(doc, "A continuación se formalizan los requisitos funcionales y no funcionales que rigen el comportamiento técnico y operativo de MotoTaller.")
+    add_p(doc, "A continuación se formalizan los 16 requisitos funcionales y 10 no funcionales que rigen el comportamiento técnico y operativo de MotoTaller.")
 
     add_heading_2(doc, "3.1 Requisitos Funcionales (RF)")
     rf_data = [
@@ -276,32 +273,16 @@ def build_mototaller_deliverables_document():
     ]
     add_table_data(doc, rbac_headers, rbac_data, [Inches(2.5), Inches(0.8), Inches(0.8), Inches(0.8), Inches(0.8), Inches(0.8)])
 
-    add_heading_2(doc, "4.3 Historias de Usuario Principales (Scrum)")
-    
-    add_heading_3(doc, "HU-01: Venta Rápida con Descuento en POS")
-    add_p(doc, "Como Cajero del almacén, quiero escanear productos con el lector de código de barras, aplicar un descuento comercial negociado y cobrar en efectivo o transferencia, para agilizar la fila de clientes y entregar un ticket detallado donde se observe el ahorro.")
-    add_bullet(doc, "Dado que el cajero está en el módulo de ventas, cuando escanea el código de barras '770123456789', el sistema agrega instantáneamente el repuesto al carrito con su precio unitario.", "Criterio 1: ")
-    add_bullet(doc, "Dado que se pactó un descuento, cuando el cajero ingresa un 10% de descuento o un valor en pesos, el sistema recalcula el total y muestra en color amarillo el valor descontado.", "Criterio 2: ")
-    add_bullet(doc, "Dado que se confirma el pago, el sistema imprime el ticket térmico mostrando SUBTOTAL, DESCUENTO APLICADO y TOTAL A PAGAR.", "Criterio 3: ")
-
-    add_heading_3(doc, "HU-02: Recepción y Creación de Orden de Taller")
-    add_p(doc, "Como Mecánico o Administrador, quiero recibir una motocicleta ingresando su placa, kilometraje y marcar el checklist de estado físico, para evitar reclamos por daños preexistentes y tener trazabilidad técnica.")
-    add_bullet(doc, "Dado que ingresa una motocicleta con placa 'XYZ-12D', el sistema recupera automáticamente el historial del cliente o solicita los datos básicos si es nueva.", "Criterio 1: ")
-    add_bullet(doc, "Dado que se efectúa la inspección, el sistema permite registrar fallas reportadas y marcar ítems recibidos (espejos, casco, estado de llantas, nivel de combustible).", "Criterio 2: ")
-    add_bullet(doc, "Al guardar, la orden queda en estado 'RECIBIDA' lista para diagnóstico y asignación.", "Criterio 3: ")
-
     doc.add_page_break()
 
     # ==========================================
     # SECCIÓN 5: ESPECIFICACIÓN DE CASOS DE USO
     # ==========================================
     add_heading_1(doc, "5. ESPECIFICACIÓN FORMAL DE CASOS DE USO DEL NEGOCIO")
-    add_p(doc, "Se describen los flujos de interacción formal de los casos de uso más críticos del software.")
-
+    
     cu_list = [
         {
-            "code": "CU-01",
-            "name": "Iniciar Sesión en el Sistema",
+            "code": "CU-01", "name": "Iniciar Sesión en el Sistema",
             "actor": "Todos los usuarios autorizados (SUPERADMIN, ADMIN, CAJERO, MECANICO, BODEGUERO)",
             "obj": "Autenticar la identidad del colaborador y crear una sesión segura HttpOnly.",
             "pre": "El usuario debe existir en la base de datos y encontrarse en estado activo.",
@@ -310,8 +291,7 @@ def build_mototaller_deliverables_document():
             "post": "Sesión establecida exitosamente; interfaz desbloqueada según permisos RBAC."
         },
         {
-            "code": "CU-02",
-            "name": "Facturar Venta en Mostrador (POS) con Descuento",
+            "code": "CU-02", "name": "Facturar Venta en Mostrador (POS) con Descuento",
             "actor": "Cajero o Administrador",
             "obj": "Consolidar los repuestos adquiridos por el cliente, aplicar descuentos y registrar el cobro.",
             "pre": "Debe existir al menos un producto con stock y la caja debe encontrarse en estado ABIERTA.",
@@ -320,8 +300,7 @@ def build_mototaller_deliverables_document():
             "post": "Factura guardada, inventario rebajado, movimiento registrado en caja y ticket emitido."
         },
         {
-            "code": "CU-03",
-            "name": "Apertura y Diagnóstico de Orden de Taller",
+            "code": "CU-03", "name": "Apertura y Diagnóstico de Orden de Taller",
             "actor": "Mecánico o Administrador",
             "obj": "Registrar el ingreso técnico de la motocicleta y diagnosticar las reparaciones necesarias.",
             "pre": "El cliente y la motocicleta deben estar registrados en el sistema.",
@@ -330,8 +309,7 @@ def build_mototaller_deliverables_document():
             "post": "Orden de trabajo creada y visible en el tablero Kanban del taller."
         },
         {
-            "code": "CU-04",
-            "name": "Asociación de Repuestos y Liquidación de Taller",
+            "code": "CU-04", "name": "Asociación de Repuestos y Liquidación de Taller",
             "actor": "Mecánico / Administrador",
             "obj": "Descargar repuestos de almacén para instalarlos en la motocicleta y cobrar la mano de obra.",
             "pre": "La orden de trabajo debe estar en estado 'EN_REPARACIÓN'.",
@@ -340,8 +318,7 @@ def build_mototaller_deliverables_document():
             "post": "Stock descargado del inventario general y orden lista para ser cancelada por el cliente."
         },
         {
-            "code": "CU-05",
-            "name": "Arqueo y Cierre Ciego de Caja",
+            "code": "CU-05", "name": "Arqueo y Cierre Ciego de Caja",
             "actor": "Cajero",
             "obj": "Efectuar el conteo físico de dinero al finalizar la jornada y contrastarlo con el sistema.",
             "pre": "La sesión de caja debe estar en estado ABIERTA.",
@@ -367,17 +344,11 @@ def build_mototaller_deliverables_document():
     doc.add_page_break()
 
     # ==========================================
-    # SECCIÓN 6: ARQUITECTURA Y TECNOLOGÍAS
+    # SECCIÓN 6: ARQUITECTURA DE SOFTWARE
     # ==========================================
-    add_heading_1(doc, "6. ARQUITECTURA DE SOFTWARE, STACK TECNOLÓGICO Y DIAGRAMAS")
-    
-    add_heading_2(doc, "6.1 Arquitectura en Capas (Layered Architecture)")
-    add_p(doc, "MotoTaller implementa un patrón de arquitectura limpia desacoplada en tres capas principales:")
-    add_bullet(doc, "Construida con React 19 y Next.js 16 (App Router), estilizada mediante Tailwind CSS v4. Implementa componentes interactivos cliente ('use client') y vistas optimizadas para renderizado rápido, soportando funcionamiento como Aplicación Web Progresiva (PWA).", "Capa de Presentación (UI/UX): ")
-    add_bullet(doc, "Endpoints REST en Next.js Route Handlers (`src/app/api/*`). Centraliza la lógica de negocio, validaciones de permisos RBAC, cálculos de descuentos, deducciones de inventario y generación de esquemas de respuesta.", "Capa de Lógica de Negocio y APIs: ")
-    add_bullet(doc, "Gestionada mediante Prisma ORM 5.x sobre el motor de base de datos relacional SQLite configurado con modo de registro por anticipado WAL (Write-Ahead Logging). Esto permite lecturas de alta concurrencia y máxima tolerancia a cortes eléctricos.", "Capa de Acceso a Datos y Persistencia: ")
+    add_heading_1(doc, "6. ARQUITECTURA DE SOFTWARE Y STACK TECNOLÓGICO")
+    add_p(doc, "MotoTaller se fundamenta en un modelo de arquitectura limpia desacoplada en cuatro capas funcionales: Presentación Cliente (PWA), Comunicación y Túnel Remoto Cifrado, Lógica de Negocio Serverless (Route Handlers) y Persistencia Relacional con Motor SQLite en modo WAL.")
 
-    add_heading_2(doc, "6.2 Stack Tecnológico Oficial")
     stack_data = [
         ["Framework Fullstack", "Next.js 16.0 (App Router)", "Renderizado híbrido, enrutamiento moderno y APIs serverless."],
         ["Biblioteca de Interfaz", "React 19.0", "Gestión reactiva de estado y componentes atómicos."],
@@ -391,19 +362,67 @@ def build_mototaller_deliverables_document():
     ]
     add_table_data(doc, ["Componente", "Tecnología Seleccionada", "Función en el Sistema"], stack_data, [Inches(1.8), Inches(2.0), Inches(2.7)])
 
-    add_heading_2(doc, "6.3 Diagrama de Despliegue e Interconexión")
-    add_p(doc, "La infraestructura de despliegue de MotoTaller opera de la siguiente manera:")
-    add_bullet(doc, "Ejecuta el servidor web Next.js en el puerto 3000 y aloja la base de datos local 'prisma/dev.db'. Está conectado a un lector de código de barras USB y una impresora térmica de tickets.", "1. Servidor / Computador Principal de Mostrador: ")
-    add_bullet(doc, "Un subproceso automatizado en 'start.bat' levanta el túnel ngrok con dominio fijo (https://finished-lucia-transpersonally.ngrok-free.dev), exponiendo de forma cifrada el puerto 3000 a internet.", "2. Enlace Cifrado de Túnel Remoto: ")
-    add_bullet(doc, "Los mecánicos en el patio y administradores fuera del local abren la URL o escanean el código QR en sus celulares, instalando MotoTaller como PWA nativa con acceso total a las funciones del taller.", "3. Dispositivos Móviles y Tablets: ")
+    doc.add_page_break()
+
+    # ==========================================
+    # SECCIÓN 7: CATÁLOGO VISUAL DE DIAGRAMAS
+    # ==========================================
+    add_heading_1(doc, "7. CATÁLOGO VISUAL DE DIAGRAMAS DE INGENIERÍA DE SOFTWARE")
+    add_p(doc, "A continuación se presentan los ocho diagramas gráficos oficiales que modelan la arquitectura, interacción de actores, flujos operativos de negocio, estructura de base de datos, topología de despliegue y máquina de estados de MotoTaller.")
+
+    # 1. Arquitectura
+    add_heading_2(doc, "7.1 Diagrama de Arquitectura de Software en Capas")
+    add_p(doc, "Representa las cuatro capas de la plataforma: Presentación cliente (PWA y Mostrador), Túnel seguro HTTPS (ngrok), Capa de servicios y lógica de negocio (Next.js 16 App Router) y Capa de persistencia (Prisma ORM y SQLite WAL).")
+    add_diagram(doc, os.path.abspath("docs_images/diagrama_arquitectura.png"), "Figura 1: Diagrama de Arquitectura de Software en Capas de MotoTaller v2.4", Inches(6.3))
+
+    # 2. Casos de Uso
+    add_heading_2(doc, "7.2 Diagrama de Casos de Uso UML")
+    add_p(doc, "Modela la frontera del sistema MotoTaller y las interacciones de los cinco actores principales (Cajero, Mecánico, Administrador, Bodeguero y Superadministrador) con los casos de uso nucleares.")
+    add_diagram(doc, os.path.abspath("docs_images/diagrama_casos_de_uso.png"), "Figura 2: Diagrama de Casos de Uso UML del Sistema MotoTaller", Inches(6.3))
+
+    doc.add_page_break()
+
+    # 3. Flujo POS
+    add_heading_2(doc, "7.3 Diagrama de Flujo del Proceso de Ventas POS y Descuentos")
+    add_p(doc, "Describe el flujo secuencial de atención en mostrador: escaneo con lector láser, validación de stock, aplicación interactiva de descuentos en porcentaje o pesos, selección de métodos de pago y emisión de ticket térmico.")
+    add_diagram(doc, os.path.abspath("docs_images/diagrama_flujo_pos.png"), "Figura 3: Flujograma de Venta Rápida POS y Descuentos", Inches(6.1))
+
+    # 4. Flujo Taller
+    add_heading_2(doc, "7.4 Diagrama de Flujo del Ciclo de Atención en Taller de Motocicletas")
+    add_p(doc, "Modela el ciclo operativo de servicio mecánico: recepción e inspección inicial de la moto, diagnóstico técnico, descarga de repuestos de bodega en tiempo real, liquidación de mano de obra y cobro.")
+    add_diagram(doc, os.path.abspath("docs_images/diagrama_flujo_taller.png"), "Figura 4: Flujograma del Ciclo de Vida y Servicio Mecánico en Taller", Inches(6.1))
+
+    doc.add_page_break()
+
+    # 5. DER Visual
+    add_heading_2(doc, "7.5 Diagrama Entidad-Relación (DER Conceptual)")
+    add_p(doc, "Esquema gráfico de las entidades principales de la base de datos (Customer, Motorcycle, WorkOrder, Product, WorkOrderItem, Invoice, Credit y CashSession) y sus cardinalidades 1:N y 1:1.")
+    add_diagram(doc, os.path.abspath("docs_images/diagrama_entidad_relacion.png"), "Figura 5: Diagrama Entidad-Relación (DER) de la Base de Datos Relacional", Inches(6.3))
+
+    # 6. Despliegue Físico y de Red
+    add_heading_2(doc, "7.6 Diagrama de Despliegue Físico y de Red")
+    add_p(doc, "Topología de infraestructura: PC Servidor local con periféricos USB (lector láser e impresora térmica), túnel HTTPS ngrok con dominio fijo y dispositivos móviles en el patio del taller conectados vía WiFi.")
+    add_diagram(doc, os.path.abspath("docs_images/diagrama_despliegue.png"), "Figura 6: Diagrama de Despliegue e Infraestructura Local/Remota", Inches(6.3))
+
+    doc.add_page_break()
+
+    # 7. Secuencia UML
+    add_heading_2(doc, "7.7 Diagrama de Secuencia UML de Facturación en POS")
+    add_p(doc, "Muestra la interacción sincrónica en el tiempo entre el Cajero, la Interfaz React, el Route Handler /api/sales, el motor de persistencia Prisma/SQLite y el subsistema de impresión ESC/POS.")
+    add_diagram(doc, os.path.abspath("docs_images/diagrama_secuencia_pos.png"), "Figura 7: Diagrama de Secuencia UML - Transacción de Venta en Mostrador", Inches(6.3))
+
+    # 8. Máquina de Estados
+    add_heading_2(doc, "7.8 Máquina de Estados de una Orden de Trabajo (WorkOrder)")
+    add_p(doc, "Ciclo de vida y transiciones válidas de una motocicleta en el taller: RECIBIDA -> EN_DIAGNÓSTICO -> EN_REPARACIÓN -> (ESPERANDO_REPUESTOS) -> LISTA_PARA_ENTREGA -> ENTREGADA_Y_FACTURADA.")
+    add_diagram(doc, os.path.abspath("docs_images/diagrama_estados_orden.png"), "Figura 8: Diagrama de Estados de la Orden de Trabajo de Taller", Inches(6.3))
 
     doc.add_page_break()
 
     # ==========================================
-    # SECCIÓN 7: DICCIONARIO DE DATOS
+    # SECCIÓN 8: DICCIONARIO DE DATOS
     # ==========================================
-    add_heading_1(doc, "7. DICCIONARIO DE DATOS Y MODELO DE BASE DE DATOS")
-    add_p(doc, "A continuación se documenta el esquema formal de base de datos extraído directamente de 'prisma/schema.prisma'. El modelo cuenta con 18 tablas optimizadas para alta integridad referencial.")
+    add_heading_1(doc, "8. DICCIONARIO DE DATOS Y MODELO DE BASE DE DATOS")
+    add_p(doc, "Estructura formal de las entidades relacionales extraídas de 'prisma/schema.prisma'.")
 
     tables = [
         {
@@ -492,18 +511,12 @@ def build_mototaller_deliverables_document():
         add_heading_2(doc, f"Tabla: {tbl_info['name']}")
         add_table_data(doc, ["Columna", "Tipo de Dato", "Nulo", "Llave", "Descripción Técnica"], tbl_info["cols"], [Inches(1.2), Inches(1.3), Inches(0.6), Inches(0.7), Inches(2.7)])
 
-    add_callout(doc,
-        "La restricción técnica @unique sobre la columna 'barcode' en la tabla Product impide que dos productos compartan el mismo código. Si un usuario intenta registrar un repuesto con un código de barras ya existente en el catálogo, SQLite rechaza la transacción arrojando: 'Unique constraint failed on the fields: (barcode)'. Esta regla protege la integridad física de las lecturas en caja.",
-        "ANÁLISIS DE LA RESTRICCIÓN DE CÓDIGO DE BARRAS")
-
     doc.add_page_break()
 
     # ==========================================
-    # SECCIÓN 8: CATÁLOGO DE APIS REST
+    # SECCIÓN 9: CATÁLOGO DE APIS REST
     # ==========================================
-    add_heading_1(doc, "8. CATÁLOGO COMPLETO DE APIS Y ENDPOINTS REST")
-    add_p(doc, "MotoTaller expone una arquitectura de servicios RESTful segura bajo la raíz '/api/'. Todos los endpoints reciben y responden en formato application/json.")
-
+    add_heading_1(doc, "9. CATÁLOGO COMPLETO DE APIS Y ENDPOINTS REST")
     api_data = [
         ["POST", "/api/auth/login", "Autenticación de usuario con email y contraseña. Devuelve sesión y cookie HttpOnly.", "200, 401, 403"],
         ["GET", "/api/auth/me", "Obtiene los datos del usuario actualmente autenticado según su token de sesión.", "200, 401"],
@@ -527,11 +540,9 @@ def build_mototaller_deliverables_document():
     doc.add_page_break()
 
     # ==========================================
-    # SECCIÓN 9: PLAN Y MATRIZ DE PRUEBAS
+    # SECCIÓN 10: PLAN Y MATRIZ DE PRUEBAS
     # ==========================================
-    add_heading_1(doc, "9. PLAN DE PRUEBAS DE SOFTWARE Y MATRIZ DE RESULTADOS")
-    add_p(doc, "El aseguramiento de la calidad de MotoTaller se ejecutó mediante un protocolo exhaustivo de pruebas funcionales, de seguridad, concurrencia y usabilidad en dispositivos móviles y de escritorio.")
-
+    add_heading_1(doc, "10. PLAN DE PRUEBAS DE SOFTWARE Y MATRIZ DE RESULTADOS")
     test_data = [
         ["CP-01", "Autenticación válida", "Ingresar email y contraseña correctos de un Administrador.", "Acceso concedido al Dashboard y cookie de sesión generada.", "Aprobado"],
         ["CP-02", "Protección de Fuerza Bruta", "Ingresar 5 veces consecutivas contraseñas erróneas.", "Cuenta bloqueada temporalmente por 15 min; alerta visual emitida.", "Aprobado"],
@@ -546,90 +557,116 @@ def build_mototaller_deliverables_document():
     ]
     add_table_data(doc, ["ID", "Caso de Prueba", "Procedimiento / Entrada", "Resultado Esperado y Verificado", "Estado"], test_data, [Inches(0.7), Inches(1.5), Inches(1.8), Inches(1.9), Inches(0.6)])
 
-    add_callout(doc,
-        "Todas las pruebas del catálogo fueron ejecutadas satisfactoriamente (100% de aprobación). Se resolvieron incidentes previos de hidratación SSR en componentes cliente y se blindó el control de duplicidad en códigos de barras para garantizar la máxima estabilidad operativa.",
-        "DICTAMEN DE CALIDAD DE PRUEBAS")
+    # ==========================================
+    # SECCIÓN 11: SEGURIDAD Y POLÍTICAS
+    # ==========================================
+    add_heading_1(doc, "11. SEGURIDAD DE LA INFORMACIÓN, HASHING Y PROTECCIÓN OWASP")
+    add_bullet(doc, "Algoritmo Argon2id para almacenamiento de contraseñas con coste de memoria resistente a GPUs.", "Criptografía: ")
+    add_bullet(doc, "Cookies HttpOnly con SameSite=Lax para prevenir robo de sesión por ataques XSS.", "Cookies Seguras: ")
+    add_bullet(doc, "Consultas 100% parametrizadas a través de Prisma ORM para neutralizar inyecciones SQL.", "Anti-SQL Injection: ")
+    add_bullet(doc, "Apego a la Ley 1581 de 2012 de Colombia sobre protección de datos personales y Habeas Data.", "Habeas Data: ")
 
     doc.add_page_break()
 
     # ==========================================
-    # SECCIÓN 10: SEGURIDAD Y POLÍTICAS
+    # SECCIÓN 12: MANUAL DE USUARIO COMPLETO
     # ==========================================
-    add_heading_1(doc, "10. SEGURIDAD DE LA INFORMACIÓN, HASHING Y PROTECCIÓN OWASP")
-    
-    add_heading_2(doc, "10.1 Almacenamiento Seguro de Contraseñas")
-    add_p(doc, "MotoTaller rechaza el almacenamiento de contraseñas en texto claro o con algoritmos obsoletos (MD5, SHA-1). Se utiliza el algoritmo ganador del Password Hashing Competition: Argon2id, el cual provee resistencia matemática contra ataques asistidos por hardware ASIC y tarjetas gráficas GPU.")
+    add_heading_1(doc, "12. MANUAL DE USUARIO Y OPERACIÓN COMPLETO")
+    add_p(doc, "Este manual proporciona las directrices paso a paso para el uso operativo de todas las funcionalidades de MotoTaller, estructurado conforme al estándar de 17 puntos de la guía maestra de entregables.")
 
-    add_heading_2(doc, "10.2 Protección de Sesiones Web")
-    add_bullet(doc, "Los identificadores de sesión se transmiten exclusivamente mediante cookies marcadas como HttpOnly, imposibilitando su robo mediante scripts maliciosos de JavaScript (XSS).", "Cookies HttpOnly: ")
-    add_bullet(doc, "Configuración con 'SameSite=Lax' y flag 'Secure' activo en despliegues con túnel HTTPS para evitar ataques de falsificación de peticiones en sitios cruzados.", "Protección CSRF: ")
-    add_bullet(doc, "Las consultas a la base de datos se generan a través de Prisma ORM, el cual parametriza todas las variables de entrada de forma nativa, neutralizando el 100% de los intentos de inyección SQL.", "Blindaje SQL Injection: ")
+    add_heading_2(doc, "12.1 Requisitos Mínimos para Utilizar el Sistema")
+    add_bullet(doc, "Dispositivo Mostrador: Computador con Windows 10/11, procesador Core i3 o superior, 4 GB de RAM y puerto USB para periféricos.")
+    add_bullet(doc, "Dispositivos Móviles (Patio): Smartphone o tablet con Android 9+ o iOS 13+ con navegador Google Chrome o Safari.")
+    add_bullet(doc, "Periféricos Opcionales: Pistola lectora de código de barras USB y Mini impresora térmica de tickets de 58mm u 80mm.")
 
-    add_heading_2(doc, "10.3 Cumplimiento Legal y Habeas Data")
-    add_p(doc, "El sistema incorpora políticas de tratamiento de datos personales en apego a la Ley Estatutaria 1581 de 2012 de la República de Colombia. Los datos de contacto y placas vehiculares de los clientes se custodian de forma privada en el servidor local del establecimiento sin ser cedidos ni comercializados a terceros.")
+    add_heading_2(doc, "12.2 Cómo Acceder al Software")
+    add_bullet(doc, "http://localhost:3000 (desde el computador de mostrador donde corre el sistema).", "Acceso Local: ")
+    add_bullet(doc, "https://finished-lucia-transpersonally.ngrok-free.dev (enlace fijo HTTPS para celulares de mecánicos y administradores).", "Acceso Remoto / Móvil: ")
 
-    # ==========================================
-    # SECCIÓN 11: MANUAL DE INSTALACIÓN Y DESPLIEGUE
-    # ==========================================
-    add_heading_1(doc, "11. MANUAL DE INSTALACIÓN, CONFIGURACIÓN Y DESPLIEGUE")
-    
-    add_heading_2(doc, "11.1 Requisitos Mínimos del Servidor / PC Mostrador")
-    add_bullet(doc, "Procesador: Intel Core i3 (4ta generación o superior) / AMD Ryzen 3.", "Hardware: ")
-    add_bullet(doc, "Memoria RAM: 4 GB mínimo (8 GB recomendado).", "Memoria: ")
-    add_bullet(doc, "Almacenamiento: 10 GB de espacio libre en disco (SSD preferible).", "Disco: ")
-    add_bullet(doc, "Sistema Operativo: Windows 10/11 (64 bits), Linux Ubuntu 22.04 LTS o macOS.", "S.O.: ")
-    add_bullet(doc, "Software Base: Node.js versión 20.x o superior instalado en el sistema.", "Entorno: ")
+    add_heading_2(doc, "12.3 Inicio de Sesión y Acceso Seguro")
+    add_p(doc, "1. Ingrese a la dirección web de MotoTaller.\n2. En la pantalla de Login, escriba su correo electrónico corporativo y contraseña.\n3. Si accede desde un celular, podrá hacer clic en 'Instalar Aplicación' para añadir el acceso directo con icono en su pantalla de inicio.\n4. Presione 'Iniciar Sesión'. Al autenticarse, el sistema lo dirigirá al Dashboard o al módulo correspondiente a su rol.")
 
-    add_heading_2(doc, "11.2 Puesta en Marcha en Tres Pasos")
-    add_bullet(doc, "Descargar o clonar el repositorio público mediante 'git clone https://github.com/rosellonbreiner-lab/POS.git' e instalar las dependencias con 'npm install'.", "Paso 1: Clonación: ")
-    add_bullet(doc, "Generar el esquema de base de datos ejecutando 'npx prisma db push' para crear las tablas en 'prisma/dev.db'.", "Paso 2: Base de Datos: ")
-    add_bullet(doc, "Hacer doble clic sobre el archivo ejecutable 'start.bat' en la raíz del proyecto. Este script inicia automáticamente el servidor Next.js y el túnel seguro ngrok.", "Paso 3: Inicio con start.bat: ")
+    add_heading_2(doc, "12.4 Descripción de la Interfaz y Menú Principal")
+    add_bullet(doc, "Muestra resumen de ventas del día, ingresos, órdenes de taller activas, repuestos en stock crítico y accesos rápidos.", "1. Panel / Dashboard: ")
+    add_bullet(doc, "Terminal de facturación rápida con pistola de código de barras, buscador de repuestos, descuentos y cobro.", "2. Ventas / POS: ")
+    add_bullet(doc, "Tablero de recepción de motos, inspección con checklist físico, diagnóstico, mecánicos asignados y liquidación.", "3. Taller / Órdenes: ")
+    add_bullet(doc, "Catálogo completo de partes con código de barras único, SKU, precios de compra/venta, márgenes y ubicación en estante.", "4. Inventario / Repuestos: ")
+    add_bullet(doc, "Directorio con cédula, nombres, teléfono y hoja de vida de motocicletas vinculadas por placa.", "5. Clientes y Motos: ")
+    add_bullet(doc, "Gestión de ventas a crédito otorgadas, historial de pagos recibidos, saldo adeudado y recibo de abono.", "6. Créditos / Cartera: ")
+    add_bullet(doc, "Apertura de turno, registro de entradas/salidas de efectivo, arqueo ciego final y reporte de descuadre.", "7. Caja / Contabilidad: ")
+    add_bullet(doc, "Configuración de datos del negocio (NIT, RUT, resolución), logo, tickets térmicos y administración de usuarios.", "8. Ajustes / Configuración: ")
 
-    add_heading_2(doc, "11.3 Acceso Remoto Móvil y Túnel ngrok")
-    add_p(doc, "El sistema cuenta con un túnel configurado con dominio fijo para que los mecánicos utilicen sus celulares en el taller sin necesidad de reconfigurar la URL cada día:")
-    add_bullet(doc, "https://finished-lucia-transpersonally.ngrok-free.dev", "URL Remota Fija: ")
-    add_bullet(doc, "http://localhost:3000", "Acceso Local en PC Mostrador: ")
+    add_heading_2(doc, "12.5 Operación del Punto de Venta (POS) y Descuentos")
+    add_p(doc, "Pasos para facturar una venta:")
+    add_bullet(doc, "Tome la pistola lectora láser y apunte al código de barras del empaque del repuesto. El producto se agregará de inmediato al carrito. También puede escribir el nombre en la barra de búsqueda rápida (Atajo F4).", "Paso 1 (Agregar Ítems): ")
+    add_bullet(doc, "Haga clic en el botón '%' del producto o en el campo de 'Descuento Global'. Puede digitar un porcentaje (ej. 10%) o una cifra fija en pesos colombianos. El sistema recalcula el total y muestra en color amarillo el valor exacto de ahorro.", "Paso 2 (Aplicar Descuento): ")
+    add_bullet(doc, "Presione la tecla F2 o haga clic en el botón 'Cobrar'. Seleccione si el cliente paga en Efectivo, Nequi, Daviplata, Tarjeta Débito/Crédito o Crédito. Digite el valor recibido para que el sistema calcule el cambio automáticamente.", "Paso 3 (Seleccionar Método de Pago): ")
+    add_bullet(doc, "Presione 'Finalizar Venta'. El sistema guardará la factura, restará las unidades del inventario, registrará el ingreso en caja y desplegará el modal de impresión del ticket térmico con la leyenda 'USTED AHORRÓ'.", "Paso 4 (Impresión): ")
+
+    add_heading_2(doc, "12.6 Operación del Taller de Motocicletas")
+    add_p(doc, "Pasos para atender una motocicleta:")
+    add_bullet(doc, "Vaya a 'Taller' y presione 'Nueva Orden'. Escriba la placa de la moto. Si ya existe en la base de datos, sus datos y los del dueño se cargarán automáticamente.", "Paso 1 (Recepción): ")
+    add_bullet(doc, "Digite el kilometraje actual y marque en el checklist de inspección los componentes recibidos: casco, espejos retrovisores, estado de llantas, rayones visibles y nivel de combustible.", "Paso 2 (Checklist de Seguridad): ")
+    add_bullet(doc, "Describa la falla manifestada por el cliente y seleccione el técnico mecánico responsable. Guarde la orden (quedará en estado 'RECIBIDA').", "Paso 3 (Diagnóstico): ")
+    add_bullet(doc, "Durante la reparación, el mecánico abre la orden desde su celular y agrega los repuestos que retira de bodega. El stock de bodega se descuenta en tiempo real.", "Paso 4 (Consumo de Repuestos): ")
+    add_bullet(doc, "Al terminar la reparación, se digita el costo de la Mano de Obra. El sistema consolida (Repuestos + Mano de Obra) y permite liquidar la orden para imprimir la factura de taller y entregar la moto al cliente.", "Paso 5 (Liquidación y Entrega): ")
+
+    add_heading_2(doc, "12.7 Gestión de Inventario y Creación de Nuevos Repuestos")
+    add_p(doc, "Para registrar un nuevo repuesto:")
+    add_bullet(doc, "Haga clic en 'Inventario' -> 'Nuevo Producto'.")
+    add_bullet(doc, "Escanee con la pistola el código de barras del producto o escriba un código único. Recuerde que dos productos NO pueden tener el mismo código de barras.")
+    add_bullet(doc, "Digite el nombre del repuesto, precio de compra a proveedor, precio de venta al público y stock actual.")
+    add_bullet(doc, "Asigne la ubicación física en bodega (ejemplo: Bodega Principal, Estante E-02, Nivel 3) para facilitar su localización rápida.")
+    add_bullet(doc, "Presione 'Guardar' una sola vez.")
+
+    add_heading_2(doc, "12.8 Gestión de Cuentas por Cobrar (Créditos) y Abonos")
+    add_p(doc, "1. En el módulo 'Créditos', visualice los clientes con saldo pendiente y días de crédito.\n2. Para registrar un pago, haga clic sobre el crédito del cliente y seleccione 'Registrar Abono'.\n3. Digite el valor abonado y el método de pago (Efectivo o Transferencia).\n4. El sistema recalcula el saldo restante, genera el comprobante de abono y, si el saldo llega a $0, cambia automáticamente el estado del crédito a 'PAGADO'.")
+
+    add_heading_2(doc, "12.9 Arqueo y Cierre Ciego de Caja")
+    add_p(doc, "Al finalizar la jornada laboral:\n1. Ingrese a 'Caja / Contabilidad' y presione 'Cierre de Caja'.\n2. Cuente físicamente los billetes y monedas que tiene en la gaveta y digite el valor exacto en el campo 'Efectivo Físico'.\n3. Por seguridad, el sistema no le revela el total teórico antes del conteo (Arqueo Ciego).\n4. Al confirmar, el sistema contrasta el conteo físico contra las ventas netas y le mostrará si la caja está CUADRADA o si existe un SOBRANTE o FALTANTE.\n5. Si existe diferencia, digite la justificación y presione 'Confirmar Cierre Definitivo'.")
+
+    add_heading_2(doc, "12.10 Preguntas Frecuentes (FAQ)")
+    add_bullet(doc, "Causa: El código ya pertenece a otro producto en catálogo, o se hizo doble clic en guardar. Solución: Verifique en el buscador si el producto ya está creado o presione guardar una sola vez.", "¿Por qué sale 'Unique constraint failed on the fields: (barcode)' al crear un producto?: ")
+    add_bullet(doc, "Sí. Gracias a la tecnología PWA, el sistema se ejecuta en pantalla completa sin barra de direcciones en celulares Android y iPhone a través del túnel seguro.", "¿Pueden los mecánicos ver las órdenes desde sus celulares?: ")
+    add_bullet(doc, "Sí. El sistema calcula en vivo el subtotal normal, resta los descuentos y coloca en el encabezado del total: 'USTED AHORRÓ: $X.XXX'.", "¿El ticket de venta muestra el descuento que se le hizo al cliente?: ")
 
     doc.add_page_break()
 
     # ==========================================
-    # SECCIÓN 12: MANUAL DE USUARIO
+    # SECCIÓN 13: MANUAL DE ADMINISTRADOR
     # ==========================================
-    add_heading_1(doc, "12. MANUAL DE USUARIO Y GUÍA DE OPERACIÓN DEL SISTEMA")
-    
-    add_heading_2(doc, "12.1 Acceso e Inicio de Sesión")
-    add_p(doc, "1. Abra el navegador web e ingrese a http://localhost:3000 o a la URL fija de ngrok desde su celular.")
-    add_p(doc, "2. Digite su correo electrónico registrado y contraseña de acceso.")
-    add_p(doc, "3. Si accede desde el celular, en la pantalla de login observará un botón que le permite instalar MotoTaller como aplicación nativa en su pantalla de inicio.")
+    add_heading_1(doc, "13. MANUAL DE ADMINISTRADOR DEL SISTEMA")
+    add_p(doc, "Dirigido a directores y administradores de punto de venta para la gobernanza del sistema:")
+    add_bullet(doc, "Creación de colaboradores, asignación de roles y restablecimiento de contraseñas.", "Gestión de Usuarios: ")
+    add_bullet(doc, "Si un usuario ingresa su clave errónea 5 veces consecutivas, su cuenta se bloquea por 15 minutos. El Administrador puede desbloquearla inmediatamente desde el panel.", "Desbloqueo de Cuentas: ")
+    add_bullet(doc, "Ingreso de NIT, Razón Social, Dirección, Teléfono, Régimen Tributario, Consecutivo y Prefijo DIAN autorizado.", "Configuración Fiscal: ")
+    add_bullet(doc, "Supervisión del historial inmutable de acciones críticas (anulaciones de facturas, eliminaciones de inventario y logins fallidos).", "Auditoría de Eventos (AuditLog): ")
 
-    add_heading_2(doc, "12.2 Cómo Realizar una Venta con Descuento en POS")
-    add_p(doc, "1. Diríjase a la pestaña 'Ventas / POS' en el menú lateral.")
-    add_p(doc, "2. Escanee con la pistola lectora el código de barras del repuesto o búsquelo escribiendo su nombre.")
-    add_p(doc, "3. El producto se añadirá al carrito. Si desea otorgar un descuento comercial, haga clic en el botón de descuento '%' e introduzca el porcentaje o el valor en pesos.")
-    add_p(doc, "4. Verifique que el subtotal y el descuento se reflejen claramente en pantalla.")
-    add_p(doc, "5. Presione F2 o haga clic en 'Cobrar'. Seleccione el método de pago (Efectivo, Nequi, etc.) y confirme.")
-    add_p(doc, "6. Se desplegará el modal de ticket térmico listo para imprimir, mostrando el detalle 'USTED AHORRÓ'.")
+    # ==========================================
+    # SECCIÓN 14: MANUAL DE INSTALACIÓN Y DESPLIEGUE
+    # ==========================================
+    add_heading_1(doc, "14. MANUAL DE INSTALACIÓN, CONFIGURACIÓN Y DESPLIEGUE")
+    add_p(doc, "Pasos técnicos para instalar y desplegar MotoTaller:")
+    add_bullet(doc, "Instalar Node.js versión 20.x o superior en el equipo de mostrador.", "1. Prerrequisitos: ")
+    add_bullet(doc, "Ejecutar 'git clone https://github.com/rosellonbreiner-lab/POS.git' y luego 'npm install'.", "2. Descarga de Dependencias: ")
+    add_bullet(doc, "Ejecutar 'npx prisma db push' para inicializar la base de datos relacional 'prisma/dev.db'.", "3. Base de Datos: ")
+    add_bullet(doc, "Hacer doble clic en 'start.bat' en la raíz. Este archivo automatizado levanta el servidor local en el puerto 3000 y el túnel seguro ngrok simultáneamente.", "4. Arranque Automatizado: ")
+    add_bullet(doc, "Abrir en el celular el enlace https://finished-lucia-transpersonally.ngrok-free.dev y pulsar 'Instalar Aplicación' en la pantalla de bienvenida.", "5. Acceso Móvil PWA: ")
 
-    add_heading_2(doc, "12.3 Cómo Recepcionar una Motocicleta en Taller")
-    add_p(doc, "1. Ingrese a la sección 'Taller' y presione 'Nueva Orden'.")
-    add_p(doc, "2. Digite la placa de la moto. Si la moto ya ha visitado el taller, sus datos se cargarán solos.")
-    add_p(doc, "3. Digite el kilometraje actual y marque en el checklist el estado de la moto (espejos, rayones, casco, gasolina).")
-    add_p(doc, "4. Detalle las fallas reportadas y asigne el mecánico responsable.")
-    add_p(doc, "5. Guarde la orden. A medida que avance la reparación, el mecánico podrá agregar repuestos de bodega y cargar el costo de su mano de obra.")
-
-    add_heading_2(doc, "12.4 Cómo Realizar el Arqueo y Cierre de Caja")
-    add_p(doc, "1. Al culminar el turno, diríjase a 'Caja / Contabilidad' y haga clic en 'Cierre de Caja'.")
-    add_p(doc, "2. Cuente físicamente el dinero en la gaveta y digite el valor exacto en el campo 'Efectivo Físico'.")
-    add_p(doc, "3. Presione 'Confirmar Cierre'. El sistema comparará su conteo contra las ventas registradas y le informará si la caja está cuadrada o si existe sobrante/faltante.")
+    # ==========================================
+    # SECCIÓN 15: MANUAL TÉCNICO Y MANTENIMIENTO
+    # ==========================================
+    add_heading_1(doc, "15. MANUAL TÉCNICO, DE BASE DE DATOS Y MANTENIMIENTO")
+    add_bullet(doc, "El motor SQLite opera con modo WAL (Write-Ahead Logging), permitiendo lecturas concurrentes sin bloquear escrituras.", "Concurrencia WAL: ")
+    add_bullet(doc, "Copiar diariamente el archivo binario 'prisma/dev.db' a una memoria USB o servicio en la nube (OneDrive/Google Drive).", "Copia de Seguridad: ")
+    add_bullet(doc, "Ejecutar mensualmente 'VACUUM;' en la base de datos para compactar el almacenamiento y optimizar los índices de búsqueda.", "Optimización Periódica: ")
 
     doc.add_page_break()
 
     # ==========================================
-    # SECCIÓN 13: MANUAL DE SOLUCIÓN DE PROBLEMAS
+    # SECCIÓN 16: SOLUCIÓN DE PROBLEMAS
     # ==========================================
-    add_heading_1(doc, "13. MANUAL DE SOLUCIÓN DE PROBLEMAS (TROUBLESHOOTING)")
-    add_p(doc, "Guía técnica para la resolución inmediata de eventualidades operativas:")
-
+    add_heading_1(doc, "16. MANUAL DE SOLUCIÓN DE PROBLEMAS (TROUBLESHOOTING)")
     err_data = [
         ["Error: Unique constraint failed on the fields: (barcode)", 
          "Ocurre al intentar agregar un producto cuyo código de barras ya pertenece a otro repuesto en el catálogo, o por hacer doble clic veloz en 'Guardar'.", 
@@ -653,47 +690,34 @@ def build_mototaller_deliverables_document():
     ]
     add_table_data(doc, ["Mensaje / Incidencia", "Causa Técnica Raíz", "Procedimiento de Solución Inmediata"], err_data, [Inches(2.0), Inches(2.2), Inches(2.3)])
 
-    doc.add_page_break()
-
     # ==========================================
-    # SECCIÓN 14: GESTIÓN DE VERSIONES Y GIT
+    # SECCIÓN 17: GESTIÓN DE VERSIONES Y GIT
     # ==========================================
-    add_heading_1(doc, "14. GESTIÓN DE VERSIONES, REPOSITORIO GIT PÚBLICO Y CHANGELOG")
-    
-    add_heading_2(doc, "14.1 Repositorio Oficial Público en GitHub")
-    add_p(doc, "Para facilitar el trabajo colaborativo con compañeros de equipo, auditorías académicas y clonación en nuevos equipos, el repositorio oficial ha sido configurado con visibilidad 100% PÚBLICA:")
-    add_bullet(doc, "https://github.com/rosellonbreiner-lab/POS", "Enlace Web del Repositorio: ")
-    add_bullet(doc, "git clone https://github.com/rosellonbreiner-lab/POS.git", "Comando de Clonación Git: ")
+    add_heading_1(doc, "17. GESTIÓN DE VERSIONES, REPOSITORIO GIT PÚBLICO Y CHANGELOG")
+    add_p(doc, "El repositorio oficial del proyecto es de acceso público para toda la comunidad académica y colaboradores:")
+    add_bullet(doc, "https://github.com/rosellonbreiner-lab/POS", "URL Oficial: ")
+    add_bullet(doc, "git clone https://github.com/rosellonbreiner-lab/POS.git", "Comando de Clonación: ")
 
-    add_heading_2(doc, "14.2 Historial de Versiones del Proyecto (Changelog)")
     changelog_data = [
         ["v1.0.0", "Octubre 2026", "Lanzamiento de arquitectura base con Next.js 16, Prisma y SQLite. Catálogo inicial de 200 productos."],
         ["v1.5.0", "Octubre 2026", "Implementación del módulo de Órdenes de Trabajo de Taller y gestión de checklist de motocicletas."],
         ["v2.0.0", "Noviembre 2026", "Incorporación de Cuentas por Cobrar (Créditos), Arqueo Ciego de Caja y seguridad Argon2id."],
         ["v2.2.0", "Noviembre 2026", "Soporte de Aplicación Web Progresiva (PWA) e integración con túnel seguro ngrok con dominio fijo."],
-        ["v2.4.0", "Noviembre 2026", "Desglose visible de descuentos en pantalla de ventas y ticket térmico ('USTED AHORRÓ'). Resolución de hidratación y publicación de repositorio abierto."]
+        ["v2.4.0", "Noviembre 2026", "Desglose visible de descuentos en pantalla de ventas y ticket térmico ('USTED AHORRÓ'). 8 diagramas visuales y publicación abierta."]
     ]
     add_table_data(doc, ["Versión", "Fecha", "Hitos Técnicos y Funcionalidades Entregadas"], changelog_data, [Inches(1.0), Inches(1.5), Inches(4.0)])
-
-    # ==========================================
-    # SECCIÓN 15: PLAN DE MANTENIMIENTO Y BACKUPS
-    # ==========================================
-    add_heading_1(doc, "15. PLAN DE MANTENIMIENTO, COPIAS DE SEGURIDAD Y CONTINUIDAD")
-    add_bullet(doc, "El archivo relacional de base de datos 'prisma/dev.db' debe copiarse diariamente a una unidad USB externa o carpeta en la nube (OneDrive/Google Drive). Se provee un comando de copia rápida en el script de mantenimiento.", "Copias Diarias: ")
-    add_bullet(doc, "Ejecución mensual del comando SQLite 'PRAGMA optimize;' y 'VACUUM;' para compactar el archivo de base de datos y reconstruir índices de búsqueda de repuestos.", "Mantenimiento Preventivo: ")
-    add_bullet(doc, "En caso de daño irreparable del computador de mostrador, basta con instalar Node.js en cualquier otro equipo, clonar el repositorio de GitHub y reemplazar 'prisma/dev.db' por la última copia de seguridad para restablecer el negocio en menos de 10 minutos.", "Plan de Recuperación (DRP): ")
 
     doc.add_page_break()
 
     # ==========================================
-    # SECCIÓN 16: ACTA DE ENTREGA FORMAL
+    # SECCIÓN 18: ACTA DE ENTREGA FORMAL
     # ==========================================
-    add_heading_1(doc, "16. ACTA FORMAL DE ENTREGA Y RECEPCIÓN DE SOFTWARE")
-    add_p(doc, "En la ciudad correspondiente, a la fecha de emisión del presente documento, se suscribe la presente ACTA DE ENTREGA Y RECEPCIÓN a satisfacción del sistema de información denominado MOTOTALLER v2.4.0.")
+    add_heading_1(doc, "18. ACTA FORMAL DE ENTREGA Y RECEPCIÓN DE SOFTWARE")
+    add_p(doc, "En la ciudad correspondiente, se suscribe la presente ACTA DE ENTREGA Y RECEPCIÓN a entera satisfacción del sistema de información denominado MOTOTALLER v2.4.0.")
 
     acta_info = [
         ["Nombre del Proyecto", "MotoTaller - Sistema de Gestión Comercial, POS y Taller de Motocicletas"],
-        ["Versión Entregada", "v2.4.0 (Build de Producción PWA + Túnel ngrok + Tickets Térmicos)"],
+        ["Versión Entregada", "v2.4.0 (Build de Producción PWA + Túnel ngrok + 8 Diagramas Visuales)"],
         ["Desarrollador / Autor Líder", "Breiner Rosellon"],
         ["Repositorio Git de Entrega", "https://github.com/rosellonbreiner-lab/POS (Público)"],
         ["Destinatarios / Receptores", "Equipo de Evaluación, Docentes y Compañeros de Proyecto"],
@@ -703,16 +727,15 @@ def build_mototaller_deliverables_document():
 
     add_heading_2(doc, "Checklist de Elementos Entregados")
     add_bullet(doc, "Código fuente íntegro, funcional y documentado alojado en el repositorio público de GitHub.")
+    add_bullet(doc, "Catálogo de 8 diagramas visuales en alta resolución (Arquitectura, Casos de Uso, Flujos, DER, Despliegue, Secuencia y Estados).")
+    add_bullet(doc, "Manual de Usuario completo estructurado en 17 puntos operativos.")
+    add_bullet(doc, "Manual de Administrador para gestión de roles, auditoría y resolución fiscal.")
+    add_bullet(doc, "Manual de Instalación con script automatizado 'start.bat' y túnel ngrok de dominio fijo.")
     add_bullet(doc, "Base de datos relacional inicializada con catálogo de repuestos de prueba y roles RBAC.")
-    add_bullet(doc, "Módulo de Punto de Venta (POS) con escáner de código de barras y desglose de descuentos.")
-    add_bullet(doc, "Módulo de Taller de Motocicletas con checklist de recepción y consumo de repuestos.")
-    add_bullet(doc, "Módulo de Cartera (Créditos) con abonos parciales y Arqueo Ciego de Caja.")
-    add_bullet(doc, "Scripts de ejecución y automatización con un clic ('start.bat').")
     add_bullet(doc, "Documento maestro de entregables en formato editable (.docx) y portable (.pdf).")
 
     add_p(doc, "\nConstancia de Conformidad y Firmas:", bold=True, space_after=12)
 
-    # Signature Table
     sig_tbl = doc.add_table(rows=3, cols=2)
     sig_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
     sig_tbl.autofit = False
@@ -737,17 +760,16 @@ def build_mototaller_deliverables_document():
     r_f2.font.bold = True
     p01.add_run("Comité de Evaluación / Compañeros\nRevisión y Aceptación de Software\nFecha: ____ / ____ / 2026")
 
-    # Save Document
     output_docx = os.path.abspath("DOCUMENTO_ENTREGABLES_PROYECTO_MOTOTALLER.docx")
     output_pdf = os.path.abspath("DOCUMENTO_ENTREGABLES_PROYECTO_MOTOTALLER.pdf")
     
     doc.save(output_docx)
-    print(f"Documento Word guardado exitosamente en: {output_docx}")
+    print(f"Documento Word actualizado guardado en: {output_docx}")
 
-    print("Iniciando conversión a PDF con docx2pdf...")
+    print("Iniciando conversión a PDF...")
     try:
         convert(output_docx, output_pdf)
-        print(f"Documento PDF generado exitosamente en: {output_pdf}")
+        print(f"Documento PDF actualizado generado en: {output_pdf}")
     except Exception as e:
         print(f"Error durante conversión a PDF: {e}")
 
