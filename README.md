@@ -5,6 +5,29 @@
 
 ---
 
+## 📚 Documentación Oficial de Entregables de Ingeniería de Software
+
+Este repositorio contiene la entrega técnica integral del sistema **MotoTaller v2.4.0**, estructurada conforme a la **Guía Maestra de Entregables de Software** (Requisitos SRS, Diagramas UML, Base de Datos, Pruebas, Seguridad, Manuales y Despliegue):
+
+### 📄 Documentos de Entrega Oficiales (Word & PDF)
+| Documento | Formato Editable | Formato Portable | Descripción |
+| :--- | :---: | :---: | :--- |
+| **Documento Maestro de Entregables** | [Descargar .docx](./DOCUMENTO_ENTREGABLES_PROYECTO_MOTOTALLER.docx) | [Descargar .pdf](./DOCUMENTO_ENTREGABLES_PROYECTO_MOTOTALLER.pdf) | Libro completo con SRS (16 RF / 10 RNF), Arquitectura, 8 Diagramas, DER, APIs, 10 Casos de Prueba, Seguridad y Acta de Entrega con firmas. |
+| **Manual de Usuario y Operación** | [Descargar .docx](./MANUAL_DE_USUARIO_Y_OPERACION_MOTOTALLER.docx) | [Descargar .pdf](./MANUAL_DE_USUARIO_Y_OPERACION_MOTOTALLER.pdf) | Guía práctica de 17 capítulos con instrucciones paso a paso, flujogramas de ventas POS, checklist de taller y preguntas frecuentes. |
+
+### 🖼️ Galería de Diagramas de Arquitectura y UML (200 DPI)
+Los diagramas visuales generados se encuentran alojados en la carpeta [`/docs_images/`](./docs_images/):
+1. **[Diagrama de Arquitectura de Software en 4 Capas](./docs_images/diagrama_arquitectura.png)** (Cliente PWA, Túnel ngrok, Next.js 16 API y SQLite WAL).
+2. **[Diagrama de Casos de Uso UML](./docs_images/diagrama_casos_de_uso.png)** (5 actores: Cajero, Mecánico, Administrador, Bodeguero, Superadmin).
+3. **[Diagrama de Flujo: Proceso de Ventas POS y Descuentos](./docs_images/diagrama_flujo_pos.png)** (BPMN del proceso de cobro en mostrador).
+4. **[Diagrama de Flujo: Ciclo de Vida y Servicio en Taller](./docs_images/diagrama_flujo_taller.png)** (Atención de motos, checklist y consumo de repuestos).
+5. **[Diagrama Entidad-Relación (DER Conceptual)](./docs_images/diagrama_entidad_relacion.png)** (Modelo relacional de 18 entidades en Prisma).
+6. **[Diagrama de Despliegue Físico y de Red](./docs_images/diagrama_despliegue.png)** (PC mostrador, periféricos USB, túnel seguro y móviles).
+7. **[Diagrama de Secuencia UML](./docs_images/diagrama_secuencia_pos.png)** (Transacción sincrónica en el POS).
+8. **[Máquina de Estados de la Orden de Trabajo](./docs_images/diagrama_estados_orden.png)** (Estados: RECIBIDA -> DIAGNÓSTICO -> REPARACIÓN -> LISTA -> ENTREGADA).
+
+---
+
 ## 📱 Novedad: Aplicación Instalable en Android (PWA)
 
 El software cuenta con tecnología **Progressive Web App (PWA)** que permite instalarlo directamente en cualquier teléfono inteligente Android (así como en tablets, computadores y dispositivos iOS) como si fuese una **App nativa**:
